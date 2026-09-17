@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { UeToolsError, type SourceKind } from "./types.js";
 
-const DEFAULT_OWNER = "ABX-apps";
+const DEFAULT_OWNER = "EpicGames";
 const DEFAULT_REPO = "UnrealEngine";
 const DEFAULT_REF = "release";
 export const DEFAULT_REMOTE_CONTROL_URL = "http://127.0.0.1:30010";
@@ -57,7 +57,7 @@ export function requireToken(cfg: ToolConfig): string {
   if (!cfg.token) {
     throw new UeToolsError(
       "missing_token",
-      "Set GITHUB_TOKEN or GH_TOKEN (GitHub PAT with repo scope for ABX-apps/UnrealEngine).",
+      "Set GITHUB_TOKEN or GH_TOKEN (GitHub PAT with access to the configured Unreal Engine repo; default EpicGames/UnrealEngine).",
     );
   }
   return cfg.token;

@@ -1,14 +1,16 @@
 ---
 name: ue-editor
-description: Automate a running Unreal Editor via Epic Remote Control HTTP (default http://127.0.0.1:30010). Use for editor status, listing level actors, and console commands. Does not run on Grok Bot Linux unless UE_REMOTE_CONTROL_URL points at a workstation or lab Editor.
+description: Automate a running Unreal Editor via Remote Control HTTP (default http://127.0.0.1:30010) on the user's machine. Unofficial; not affiliated with Epic Games. Requires the Remote Control plugin.
 when-to-use: Unreal Editor Remote Control, list actors, console command, HighResShot, viewport screenshot, WebControl port 30010
 ---
 
 # Unreal Editor automation (Remote Control HTTP)
 
-Requires a **running Unreal Editor** with the **Remote Control API** plugin and HTTP server (`WebControl.StartServer`, default `http://127.0.0.1:30010`).
+**Unofficial. Not affiliated with Epic Games.**
 
-Grok Bot’s Linux computer does **not** host the Editor. Set `UE_REMOTE_CONTROL_URL` to the user’s workstation or a lab machine. Fail closed on `editor_unreachable` — do not invent other ports or clone the engine.
+Requires a **running Unreal Editor on the user’s machine** (or a lab workstation) with the **Remote Control API** plugin and HTTP server (`WebControl.StartServer`, default `http://127.0.0.1:30010`).
+
+The agent host often does **not** run the Editor. Set `UE_REMOTE_CONTROL_URL` to the machine that does. Fail closed on `editor_unreachable` — do not invent other ports or clone the engine.
 
 Python remote execution (multicast UDP) is a different protocol; these tools use HTTP only.
 

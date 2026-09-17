@@ -36,6 +36,8 @@ test("cli --help", () => {
   const result = run(["--help"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /ue-tools/);
+  assert.match(result.stdout, /Not affiliated with Epic Games/);
+  assert.match(result.stdout, /EpicGames/);
   assert.match(result.stdout, /search/);
   assert.match(result.stdout, /file get/);
   assert.match(result.stdout, /modules list/);
@@ -48,13 +50,23 @@ test("fixture status has no secrets", () => {
   const result = run(["--fixture", "status"], fixtureEnv());
   assert.equal(result.status, 0, result.stderr);
   const body = JSON.parse(result.stdout);
-  assert.equal(body.owner, "ABX-apps");
+  assert.equal(body.owner, "EpicGames");
   assert.equal(body.repo, "UnrealEngine");
   assert.equal(body.ref, "release");
   assert.equal(body.source, "fixture");
   assert.equal(body.tokenConfigured, false);
   assert.equal("token" in body, false);
   assert.doesNotMatch(result.stdout, /ghp_|github_pat_/i);
+});
+
+test("UE_OWNER overrides default for private forks", () => {
+  const env = fixtureEnv();
+  env.UE_OWNER = "ABX-apps";
+  const result = run(["--fixture", "status"], env);
+  assert.equal(result.status, 0, result.stderr);
+  const body = JSON.parse(result.stdout);
+  assert.equal(body.owner, "ABX-apps");
+  assert.equal(body.repo, "UnrealEngine");
 });
 
 test("fixture search Core", () => {
@@ -105,9 +117,11 @@ test("live search fails closed without token", () => {
 
 test("plugin manifests parse", () => {
   const plugin = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
-  assert.equal(plugin.name, "ue-source");
+  assert.equal(plugin.name, "ue-tools");
   assert.match(plugin.$schema, /plugin\.schema\.json$/);
+  assert.match(plugin.description, /Not affiliated with Epic Games/i);
+  assert.equal(plugin.license, "MIT");
   const mcp = JSON.parse(fs.readFileSync(path.join(root, "mcp.json"), "utf8"));
-  assert.equal(mcp.mcpServers["ue-source"].type, "stdio");
-  assert.equal(mcp.mcpServers["ue-source"].command, "node");
+  assert.equal(mcp.mcpServers["ue-tools"].type, "stdio");
+  assert.equal(mcp.mcpServers["ue-tools"].command, "node");
 });

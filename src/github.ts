@@ -2,7 +2,7 @@ import { UeToolsError, type SearchHit, type TextMatch, type TreeEntry } from "./
 
 const API = "https://api.github.com";
 const API_VERSION = "2022-11-28";
-const USER_AGENT = "ABX-apps-ue-tools";
+const USER_AGENT = "ue-tools";
 
 export type GitHubClient = {
   searchCode(query: string): Promise<{ total: number; incomplete: boolean; hits: SearchHit[] }>;

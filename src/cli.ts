@@ -4,16 +4,17 @@ import { editorActorsList, editorConsole, editorScreenshot, editorStatus } from 
 import { fileGet, modulesList, search, status, tree } from "./source.js";
 import { UeToolsError } from "./types.js";
 
-const HELP = `ue-tools — ABX-apps/UnrealEngine source + Remote Control Editor automation
+const HELP = `ue-tools — unofficial Unreal Editor Remote Control + optional GitHub source search
+Not affiliated with Epic Games.
 
-Source (GitHub, default ref: release):
+Source (GitHub, default EpicGames/UnrealEngine ref: release):
   ue-tools [--fixture] [--ref <ref>] status
   ue-tools [--fixture] [--ref <ref>] search <query>
   ue-tools [--fixture] [--ref <ref>] file get <path>
   ue-tools [--fixture] [--ref <ref>] tree [path]
   ue-tools [--fixture] [--ref <ref>] modules list
 
-Editor (Remote Control HTTP, default http://127.0.0.1:30010):
+Editor (Remote Control HTTP on the user's machine, default http://127.0.0.1:30010):
   ue-tools [--fixture] [--url <url>] editor status
   ue-tools [--fixture] [--url <url>] editor actors list
   ue-tools [--fixture] [--url <url>] editor console <command>
@@ -22,12 +23,10 @@ Editor (Remote Control HTTP, default http://127.0.0.1:30010):
   ue-tools mcp
 
 Env:
-  GITHUB_TOKEN or GH_TOKEN     required for live GitHub (repo scope on the private fork)
-  UE_OWNER / UE_REPO / UE_REF
-  UE_REMOTE_CONTROL_URL        Editor Remote Control base URL (workstation or lab; not Grok Bot Linux)
+  GITHUB_TOKEN or GH_TOKEN     required for live GitHub source search
+  UE_OWNER / UE_REPO / UE_REF  default EpicGames / UnrealEngine / release (override for private forks)
+  UE_REMOTE_CONTROL_URL        Editor Remote Control base URL (user's workstation or lab)
   UE_FIXTURE=1                 dry mode (bundled source tree + mock Remote Control HTTP)
-
-Private bot tooling. Not published to any marketplace.
 `;
 
 async function main(argv: string[]): Promise<number> {

@@ -2,8 +2,8 @@
   "name": "ue-tools",
   "version": "0.1.0",
   "private": true,
-  "description": "Private CLI + MCP plugin: GitHub search/read of ABX-apps/UnrealEngine plus Remote Control HTTP Editor automation.",
-  "license": "UNLICENSED",
+  "description": "Unofficial Unreal Editor Remote Control plus optional GitHub source search. Not affiliated with Epic Games.",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ABX-apps/UE_Tools.git"
@@ -15,6 +15,9 @@
   },
   "files": [
     "DOMAIN.md",
+    "LICENSE",
+    "MARKETPLACE.md",
+    "README.md",
     "dist",
     "fixtures",
     "plugin.json",

@@ -29,8 +29,8 @@ export function createFetchTransport(baseUrl: string, timeoutMs: number): RcTran
         res = await fetch(url, {
           method: req.method,
           headers: req.body
-            ? { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "ABX-apps-ue-tools" }
-            : { Accept: "application/json", "User-Agent": "ABX-apps-ue-tools" },
+            ? { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "ue-tools" }
+            : { Accept: "application/json", "User-Agent": "ue-tools" },
           body: req.body === undefined ? undefined : JSON.stringify(req.body),
           signal: AbortSignal.timeout(timeoutMs),
         });

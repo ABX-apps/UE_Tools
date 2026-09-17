@@ -16,7 +16,7 @@ const TOOLS = [
   {
     name: "ue_search",
     description:
-      "GitHub code search scoped to ABX-apps/UnrealEngine (default indexed branch: release). Fixture mode searches the bundled tree.",
+      "GitHub code search scoped to the configured Unreal Engine repo (default EpicGames/UnrealEngine, indexed branch release). Override with UE_OWNER/UE_REPO. Fixture mode searches the bundled tree.",
     inputSchema: {
       type: "object",
       properties: {
@@ -66,7 +66,7 @@ const TOOLS = [
   {
     name: "ue_editor_status",
     description:
-      "Ping Unreal Editor Remote Control HTTP (GET /remote/info). Requires a running Editor with Remote Control enabled. Set UE_REMOTE_CONTROL_URL (default http://127.0.0.1:30010). Grok Bot Linux does not host the Editor.",
+      "Ping Unreal Editor Remote Control HTTP (GET /remote/info). Requires a running Editor on the user's machine with Remote Control enabled. Set UE_REMOTE_CONTROL_URL (default http://127.0.0.1:30010). Unofficial; not affiliated with Epic Games.",
     inputSchema: {
       type: "object",
       properties: {

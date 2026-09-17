@@ -1,12 +1,13 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "ue-source",
+  "name": "ue-tools",
   "version": "0.1.0",
-  "description": "Private search/read access to ABX-apps/UnrealEngine plus Remote Control HTTP Editor automation for Abraham’s bots. Not a marketplace plugin.",
+  "description": "Unofficial Unreal Editor Remote Control for Cursor agents, plus optional GitHub source search for users who already have Unreal Engine access. Not affiliated with Epic Games.",
   "author": {
     "name": "ABX-apps"
   },
+  "homepage": "https://github.com/ABX-apps/UE_Tools",
   "repository": "https://github.com/ABX-apps/UE_Tools",
-  "license": "UNLICENSED",
-  "keywords": ["unreal", "ue", "source", "editor", "remote-control", "private"]
+  "license": "MIT",
+  "keywords": ["unreal", "ue", "editor", "remote-control", "source"]
 }
