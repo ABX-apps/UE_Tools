@@ -24,7 +24,17 @@ test("mcp stdio lists tools and fixture search", async () => {
   try {
     const listed = await client.listTools();
     const names = listed.tools.map((tool) => tool.name).sort();
-    assert.deepEqual(names, ["ue_file_get", "ue_modules_list", "ue_search", "ue_status", "ue_tree"]);
+    assert.deepEqual(names, [
+      "ue_editor_actors_list",
+      "ue_editor_console",
+      "ue_editor_screenshot",
+      "ue_editor_status",
+      "ue_file_get",
+      "ue_modules_list",
+      "ue_search",
+      "ue_status",
+      "ue_tree",
+    ]);
 
     const search = await client.callTool({ name: "ue_search", arguments: { query: "Core" } });
     assert.equal(search.isError, undefined);
@@ -32,6 +42,11 @@ test("mcp stdio lists tools and fixture search", async () => {
     const body = JSON.parse(text);
     assert.ok(body.total >= 1);
     assert.ok(body.hits.some((hit) => hit.path.includes("CoreMinimal.h")));
+
+    const editor = await client.callTool({ name: "ue_editor_actors_list", arguments: {} });
+    assert.equal(editor.isError, undefined);
+    const actors = JSON.parse(editor.content[0].text);
+    assert.ok(actors.actors.some((actor) => actor.name === "Floor"));
   } finally {
     await client.close();
   }

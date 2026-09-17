@@ -67,6 +67,65 @@ export type ModulesResult = {
 export const RUNTIME_MODULES_PATH = "Engine/Source/Runtime";
 export const EDITOR_MODULES_PATH = "Engine/Source/Editor";
 
+export const ACTOR_LIST_CANDIDATES = [
+  {
+    objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem",
+    functionName: "GetAllLevelActors",
+  },
+  {
+    objectPath: "/Script/EditorScriptingUtilities.Default__EditorLevelLibrary",
+    functionName: "GetAllLevelActors",
+  },
+] as const;
+
+export const CONSOLE_CALL = {
+  objectPath: "/Script/Engine.Default__KismetSystemLibrary",
+  functionName: "ExecuteConsoleCommand",
+} as const;
+
+export type RcHttpRoute = {
+  path: string;
+  verb: string;
+  description?: string;
+};
+
+export type EditorStatusResult = {
+  reachable: boolean;
+  url: string;
+  source: "remote-control" | "fixture";
+  routes: RcHttpRoute[];
+};
+
+export type EditorActor = {
+  path: string;
+  name: string;
+};
+
+export type EditorActorsResult = {
+  url: string;
+  source: "remote-control" | "fixture";
+  via: { objectPath: string; functionName: string };
+  actors: EditorActor[];
+};
+
+export type EditorConsoleResult = {
+  url: string;
+  source: "remote-control" | "fixture";
+  command: string;
+  via: { objectPath: string; functionName: string };
+  result: unknown;
+};
+
+export type EditorScreenshotResult = {
+  available: false;
+  imageReturned: false;
+  url: string;
+  source: "remote-control" | "fixture";
+  reason: string;
+  thumbnailRoute: string;
+  workaround: string;
+};
+
 export class UeToolsError extends Error {
   readonly code: string;
   readonly status?: number;

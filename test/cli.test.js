@@ -39,6 +39,9 @@ test("cli --help", () => {
   assert.match(result.stdout, /search/);
   assert.match(result.stdout, /file get/);
   assert.match(result.stdout, /modules list/);
+  assert.match(result.stdout, /editor status/);
+  assert.match(result.stdout, /editor actors list/);
+  assert.match(result.stdout, /editor console/);
 });
 
 test("fixture status has no secrets", () => {

@@ -1,7 +1,8 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, loadEditorConfig } from "./config.js";
+import { editorActorsList, editorConsole, editorScreenshot, editorStatus } from "./editor.js";
 import { fileGet, modulesList, search, status, tree } from "./source.js";
 import { UeToolsError } from "./types.js";
 
@@ -62,6 +63,56 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "ue_editor_status",
+    description:
+      "Ping Unreal Editor Remote Control HTTP (GET /remote/info). Requires a running Editor with Remote Control enabled. Set UE_REMOTE_CONTROL_URL (default http://127.0.0.1:30010). Grok Bot Linux does not host the Editor.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Remote Control base URL override." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ue_editor_actors_list",
+    description:
+      "List level actors via PUT /remote/object/call GetAllLevelActors (EditorActorSubsystem, then EditorLevelLibrary). Not /remote/search/actors (that route does not exist).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Remote Control base URL override." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ue_editor_console",
+    description:
+      "Run an Unreal console command via PUT /remote/object/call KismetSystemLibrary.ExecuteConsoleCommand. Requires Remote Control to allow remote console execution.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        command: { type: "string", description: "Console command, e.g. stat fps or HighResShot." },
+        url: { type: "string", description: "Remote Control base URL override." },
+      },
+      required: ["command"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "ue_editor_screenshot",
+    description:
+      "Viewport screenshot gap: Remote Control HTTP has no capture route. Confirms Editor reachability then explains /remote/object/thumbnail (asset thumbs only) and HighResShot workaround.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Remote Control base URL override." },
+      },
+      additionalProperties: false,
+    },
+  },
 ] as const;
 
 function textResult(payload: unknown) {
@@ -75,7 +126,7 @@ function errorResult(err: unknown) {
 }
 
 export async function runMcpServer(): Promise<void> {
-  const server = new Server({ name: "ue-source", version: "0.1.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "ue-tools", version: "0.1.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...TOOLS] }));
 
@@ -96,6 +147,16 @@ export async function runMcpServer(): Promise<void> {
           );
         case "ue_modules_list":
           return textResult(await modulesList(loadConfig({ ref: optionalString(args.ref) })));
+        case "ue_editor_status":
+          return textResult(await editorStatus(loadEditorConfig({ url: optionalString(args.url) })));
+        case "ue_editor_actors_list":
+          return textResult(await editorActorsList(loadEditorConfig({ url: optionalString(args.url) })));
+        case "ue_editor_console":
+          return textResult(
+            await editorConsole(String(args.command ?? ""), loadEditorConfig({ url: optionalString(args.url) })),
+          );
+        case "ue_editor_screenshot":
+          return textResult(await editorScreenshot(loadEditorConfig({ url: optionalString(args.url) })));
         default:
           return errorResult(new UeToolsError("unknown_tool", `Unknown tool: ${name}`));
       }
@@ -116,7 +177,7 @@ const isMain = process.argv[1]?.endsWith("mcp.js") || process.argv[1]?.endsWith(
 if (isMain) {
   runMcpServer().catch((err) => {
     const message = err instanceof Error ? err.message : String(err);
-    process.stderr.write(`ue-source mcp failed: ${message}\n`);
+    process.stderr.write(`ue-tools mcp failed: ${message}\n`);
     process.exit(1);
   });
 }

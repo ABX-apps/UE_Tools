@@ -2,7 +2,7 @@
   "name": "ue-tools",
   "version": "0.1.0",
   "private": true,
-  "description": "Private CLI + MCP plugin to search/read ABX-apps/UnrealEngine (default ref: release).",
+  "description": "Private CLI + MCP plugin: GitHub search/read of ABX-apps/UnrealEngine plus Remote Control HTTP Editor automation.",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",

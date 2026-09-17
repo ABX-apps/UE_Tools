@@ -5,6 +5,8 @@ import { UeToolsError, type SourceKind } from "./types.js";
 const DEFAULT_OWNER = "ABX-apps";
 const DEFAULT_REPO = "UnrealEngine";
 const DEFAULT_REF = "release";
+export const DEFAULT_REMOTE_CONTROL_URL = "http://127.0.0.1:30010";
+const DEFAULT_REMOTE_CONTROL_TIMEOUT_MS = 5000;
 
 export type ToolConfig = {
   owner: string;
@@ -14,9 +16,16 @@ export type ToolConfig = {
   token: string | null;
 };
 
+export type EditorConfig = {
+  fixture: boolean;
+  remoteControlUrl: string;
+  timeoutMs: number;
+};
+
 export type ArgFlags = {
   fixture?: boolean;
   ref?: string;
+  url?: string;
 };
 
 export function packageRoot(): string {
@@ -28,10 +37,7 @@ export function fixtureRoot(): string {
 }
 
 export function loadConfig(flags: ArgFlags = {}): ToolConfig {
-  const fixture =
-    Boolean(flags.fixture) ||
-    process.env.UE_FIXTURE === "1" ||
-    process.env.UE_FIXTURE === "true";
+  const fixture = isFixture(flags);
   const token = firstNonEmpty(process.env.GITHUB_TOKEN, process.env.GH_TOKEN);
   return {
     owner: firstNonEmpty(process.env.UE_OWNER) ?? DEFAULT_OWNER,
@@ -55,6 +61,30 @@ export function requireToken(cfg: ToolConfig): string {
     );
   }
   return cfg.token;
+}
+
+export function isFixture(flags: ArgFlags = {}): boolean {
+  return (
+    Boolean(flags.fixture) ||
+    process.env.UE_FIXTURE === "1" ||
+    process.env.UE_FIXTURE === "true"
+  );
+}
+
+export function loadEditorConfig(flags: ArgFlags = {}): EditorConfig {
+  const timeoutRaw = firstNonEmpty(process.env.UE_REMOTE_CONTROL_TIMEOUT_MS);
+  const timeoutMs = timeoutRaw ? Number(timeoutRaw) : DEFAULT_REMOTE_CONTROL_TIMEOUT_MS;
+  return {
+    fixture: isFixture(flags),
+    remoteControlUrl: stripTrailingSlash(
+      flags.url || firstNonEmpty(process.env.UE_REMOTE_CONTROL_URL) || DEFAULT_REMOTE_CONTROL_URL,
+    ),
+    timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_REMOTE_CONTROL_TIMEOUT_MS,
+  };
+}
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, "");
 }
 
 function firstNonEmpty(...values: Array<string | undefined>): string | null {
