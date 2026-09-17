@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ue-source",
+  "version": "0.1.0",
+  "description": "Private search/read access to ABX-apps/UnrealEngine (default ref release) for Abraham’s bots. Not a marketplace plugin.",
+  "author": {
+    "name": "ABX-apps"
+  },
+  "repository": "https://github.com/ABX-apps/UE_Tools",
+  "license": "UNLICENSED",
+  "keywords": ["unreal", "ue", "source", "private"]
+}

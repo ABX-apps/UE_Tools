@@ -1,0 +1,41 @@
+{
+  "name": "ue-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private CLI + MCP plugin to search/read ABX-apps/UnrealEngine (default ref: release).",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ABX-apps/UE_Tools.git"
+  },
+  "type": "module",
+  "bin": {
+    "ue-tools": "./dist/cli.js",
+    "ue-src": "./dist/cli.js"
+  },
+  "files": [
+    "DOMAIN.md",
+    "dist",
+    "fixtures",
+    "plugin.json",
+    "mcp.json",
+    "skills"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "tsc",
+    "test": "tsc && node --test test/*.test.js",
+    "ue-tools": "node dist/cli.js",
+    "mcp": "node dist/mcp.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}

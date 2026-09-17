@@ -1,0 +1,8 @@
+UNLICENSED
+
+Private tooling for Abraham’s bots (ABX-apps). Not licensed for marketplace
+distribution or third-party use.
+
+Unreal Engine is copyright Epic Games, Inc. This package does not include
+Unreal Engine source. Callers must already have access to the private fork
+ABX-apps/UnrealEngine under Epic’s license terms.
