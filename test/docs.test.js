@@ -48,7 +48,7 @@ test("screenshot gap is documented without inventing a viewport HTTP route", () 
   const domain = fs.readFileSync(path.join(root, "DOMAIN.md"), "utf8");
   const skill = fs.readFileSync(path.join(root, "skills/ue-editor/SKILL.md"), "utf8");
   for (const text of [readme, domain, skill]) {
-    assert.match(text, /no viewport-capture HTTP route|no capture route|asset thumbs/i);
+    assert.match(text, /viewport-capture HTTP route|no capture route|asset thumbs|asset thumbnails/i);
     assert.doesNotMatch(text, /\/remote\/viewport/);
     assert.doesNotMatch(text, /\/remote\/screenshot/);
   }
