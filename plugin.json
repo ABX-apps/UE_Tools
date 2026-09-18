@@ -9,5 +9,12 @@
   "homepage": "https://github.com/ABX-apps/UE_Tools",
   "repository": "https://github.com/ABX-apps/UE_Tools",
   "license": "MIT",
-  "keywords": ["unreal", "ue", "editor", "remote-control", "source"]
+  "keywords": [
+    "unreal",
+    "ue",
+    "editor",
+    "remote-control",
+    "source"
+  ],
+  "logo": "assets/logo.svg"
 }
