@@ -1,9 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ue-tools">
   <rect width="512" height="512" fill="#0F172A"/>
   <rect x="32" y="32" width="448" height="448" rx="64" fill="#1E293B"/>
-
-  <!-- Gear -->
-  <g transform="translate(256 220)">
+  <g transform="translate(256 200)">
     <circle r="92" fill="#334155"/>
     <g fill="#334155">
       <rect x="-16" y="-132" width="32" height="44" rx="5"/>
@@ -16,11 +14,9 @@
       <rect x="-16" y="-132" width="32" height="44" rx="5" transform="rotate(315)"/>
     </g>
     <circle r="52" fill="#1E293B"/>
-    <circle r="30" fill="#0F172A" stroke="#38BDF8" stroke-width="10"/>
+    <circle r="28" fill="#0F172A" stroke="#38BDF8" stroke-width="10"/>
   </g>
-
-  <!-- U -->
-  <path fill="#38BDF8" d="M96 300 h48 v70 c0 36 22 58 70 58 s70-22 70-58 v-70 h48 v72 c0 66-46 106-118 106 s-118-40-118-106 z"/>
-  <!-- E -->
-  <path fill="#F8FAFC" d="M318 300 h122 v40 H366 v36 h88 v40 h-88 v36 h98 v40 H318 z"/>
+  <text x="256" y="420" text-anchor="middle"
+        font-family="Liberation Sans, Arial, Helvetica, sans-serif"
+        font-size="168" font-weight="700" fill="#F8FAFC">UE</text>
 </svg>
