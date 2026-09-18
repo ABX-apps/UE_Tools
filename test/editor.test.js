@@ -11,10 +11,12 @@ import {
   editorObjectDescribe,
   editorObjectGet,
   editorObjectSet,
+  editorScreenshot,
   editorSelect,
   editorStatus,
 } from "../dist/editor.js";
-import { resetFixtureRemoteControl } from "../dist/remoteControl.js";
+import { assertAllowedRcRoute, createFetchTransport, resetFixtureRemoteControl } from "../dist/remoteControl.js";
+import { UeToolsError } from "../dist/types.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(root, "dist", "cli.js");
@@ -158,7 +160,8 @@ test("live editor status fails closed when Editor is unreachable", () => {
   const result = run(["editor", "status"], liveEditorEnv("http://127.0.0.1:1"));
   assert.equal(result.status, 1);
   assert.match(result.stderr, /editor_unreachable/);
-  assert.match(result.stderr, /does not host the Editor/);
+  assert.match(result.stderr, /WebControl\.StartServer/);
+  assert.match(result.stderr, /Zen/);
 });
 
 test("fetch client talks to mock Remote Control HTTP", async () => {
@@ -192,10 +195,95 @@ test("fetch client talks to mock Remote Control HTTP", async () => {
 
     const shot = await editorHighResShot(cfg);
     assert.equal(shot.command, "HighResShot");
+
+    const paths = [];
+    const screenshotServer = await listenTrackingMock(paths);
+    try {
+      const shotUrl = `http://127.0.0.1:${screenshotServer.address().port}`;
+      const shotCfg = { fixture: false, remoteControlUrl: shotUrl, timeoutMs: 1000 };
+      const gap = await editorScreenshot(shotCfg);
+      assert.equal(gap.available, false);
+      assert.equal(gap.thumbnailRoute, "/remote/object/thumbnail");
+      assert.deepEqual(paths, ["/remote/info"]);
+      assert.ok(!paths.includes("/remote/object/thumbnail"));
+    } finally {
+      await closeServer(screenshotServer);
+    }
   } finally {
     await closeServer(server);
   }
 });
+
+test("refuses invented Remote Control HTTP routes", () => {
+  assert.throws(
+    () => assertAllowedRcRoute("GET", "/remote/viewport/capture"),
+    (err) => err instanceof UeToolsError && err.code === "editor_error" && /viewport/.test(err.message),
+  );
+  assert.throws(
+    () => assertAllowedRcRoute("PUT", "/remote/object/thumbnail"),
+    (err) => err instanceof UeToolsError && err.code === "editor_error" && /thumbnail/.test(err.message),
+  );
+  assert.throws(
+    () => assertAllowedRcRoute("PUT", "/remote/search/actors"),
+    (err) => err instanceof UeToolsError && err.code === "editor_error",
+  );
+});
+
+test("non-Remote-Control HTTP at the URL fails closed as editor_unreachable", async () => {
+  const server = http.createServer((_req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ status: "ok", service: "not-remote-control" }));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const url = `http://127.0.0.1:${server.address().port}`;
+    const cfg = { fixture: false, remoteControlUrl: url, timeoutMs: 1000 };
+    await assert.rejects(
+      () => editorStatus(cfg),
+      (err) => err instanceof UeToolsError && err.code === "editor_unreachable" && /HttpRoutes/.test(err.message),
+    );
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("HTML at the Remote Control URL fails closed as editor_unreachable", async () => {
+  const server = http.createServer((_req, res) => {
+    res.setHeader("Content-Type", "text/html");
+    res.end("<!doctype html><html><body>not remote control</body></html>");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const url = `http://127.0.0.1:${server.address().port}`;
+    const transport = createFetchTransport(url, 1000);
+    await assert.rejects(
+      () => transport.request({ method: "GET", path: "/remote/info" }),
+      (err) => err instanceof UeToolsError && err.code === "editor_unreachable" && /HTML/.test(err.message),
+    );
+  } finally {
+    await closeServer(server);
+  }
+});
+
+function listenTrackingMock(paths) {
+  const server = http.createServer((req, res) => {
+    paths.push(req.url);
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      res.setHeader("Content-Type", "application/json");
+      if (req.method === "GET" && req.url === "/remote/info") {
+        res.end(JSON.stringify({ HttpRoutes: [{ Path: "/remote/info", Verb: "Get" }] }));
+        return;
+      }
+      res.statusCode = 404;
+      res.end(JSON.stringify({ errorMessage: "unhandled mock route" }));
+    });
+  });
+  return new Promise((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve(server));
+  });
+}
 
 function listenMock() {
   const actors = ["/Game/Map.Map:PersistentLevel.MockActor"];

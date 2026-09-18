@@ -1,4 +1,4 @@
-import { UeToolsError } from "./types.js";
+import { RC_ALLOWED_ROUTES, UeToolsError } from "./types.js";
 
 export type RcRequest = {
   method: "GET" | "PUT";
@@ -16,8 +16,8 @@ export type RcTransport = {
   request(req: RcRequest): Promise<RcResponse>;
 };
 
-const UNREACHABLE_HINT =
-  "Unreal Editor is not reachable over Remote Control HTTP. Enable the Remote Control API plugin, start the HTTP server (default http://127.0.0.1:30010), and set UE_REMOTE_CONTROL_URL to that machine. Grok Bot's Linux computer does not host the Editor.";
+export const UNREACHABLE_HINT =
+  "Unreal Editor is not reachable over Remote Control HTTP. Enable the Remote Control API plugin, run WebControl.StartServer (default http://127.0.0.1:30010), optionally WebControl.EnableServerOnStartup, and set UE_REMOTE_CONTROL_URL if the Editor is on another host (bind the HTTP server and allow that host through the firewall). Other Unreal services (for example Zen) listen on other ports and are not Remote Control.";
 
 const FIXTURE_ACTORS = [
   {
@@ -57,10 +57,29 @@ export function resetFixtureRemoteControl(): void {
   fixturePropertyStore.clear();
 }
 
+export function isAllowedRcRoute(method: string, path: string): boolean {
+  return RC_ALLOWED_ROUTES.some((route) => route.method === method && route.path === path);
+}
+
+export function assertAllowedRcRoute(method: string, path: string): void {
+  if (isAllowedRcRoute(method, path)) return;
+  throw new UeToolsError(
+    "editor_error",
+    `Refusing non-Remote-Control HTTP route ${method} ${path}. ue-tools only calls Epic Web Remote Control routes: GET /remote/info, PUT /remote/object/call, PUT /remote/object/property, PUT /remote/object/describe, PUT /remote/batch. PUT /remote/object/thumbnail returns Content Browser asset thumbnails only (not the viewport). There is no viewport-capture HTTP route and no /remote/search/actors.`,
+  );
+}
+
+export function looksLikeRemoteControlInfo(json: unknown): boolean {
+  return Boolean(
+    json && typeof json === "object" && Array.isArray((json as { HttpRoutes?: unknown }).HttpRoutes),
+  );
+}
+
 export function createFetchTransport(baseUrl: string, timeoutMs: number): RcTransport {
   return {
     baseUrl,
     async request(req) {
+      assertAllowedRcRoute(req.method, req.path);
       const url = `${baseUrl}${req.path}`;
       let res: Response;
       try {
@@ -76,12 +95,30 @@ export function createFetchTransport(baseUrl: string, timeoutMs: number): RcTran
         throw new UeToolsError("editor_unreachable", `${UNREACHABLE_HINT} (${describeFetchError(err)}). Tried ${url}`);
       }
       const text = await res.text();
+      const contentType = res.headers.get("content-type");
+      if (looksLikeHtml(text, contentType)) {
+        throw new UeToolsError(
+          "editor_unreachable",
+          `${UNREACHABLE_HINT} (${url} returned HTML, not Web Remote Control JSON).`,
+        );
+      }
       let json: unknown = null;
       if (text) {
         try {
           json = JSON.parse(text);
         } catch {
-          json = { raw: text };
+          throw new UeToolsError(
+            "editor_unreachable",
+            `${UNREACHABLE_HINT} (${url} returned non-JSON; other Unreal services such as Zen are not Remote Control).`,
+          );
+        }
+      }
+      if (req.method === "GET" && req.path === "/remote/info") {
+        if (!res.ok || !looksLikeRemoteControlInfo(json)) {
+          throw new UeToolsError(
+            "editor_unreachable",
+            `${UNREACHABLE_HINT} (${url} did not look like GET /remote/info with HttpRoutes).`,
+          );
         }
       }
       if (!res.ok) {
@@ -96,6 +133,7 @@ export function createFixtureTransport(): RcTransport {
   return {
     baseUrl: "fixture://remote-control",
     async request(req) {
+      assertAllowedRcRoute(req.method, req.path);
       if (req.method === "GET" && req.path === "/remote/info") {
         return {
           status: 200,
@@ -226,6 +264,13 @@ function findFixtureActor(objectPath: string): FixtureActor | undefined {
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function looksLikeHtml(text: string, contentType: string | null): boolean {
+  const ct = (contentType ?? "").toLowerCase();
+  if (ct.includes("text/html")) return true;
+  const start = text.trimStart().slice(0, 32).toLowerCase();
+  return start.startsWith("<!doctype") || start.startsWith("<html");
 }
 
 function describeFetchError(err: unknown): string {

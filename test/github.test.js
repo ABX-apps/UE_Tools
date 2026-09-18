@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { firstNonEmpty } from "../dist/config.js";
+import { firstNonEmpty, normalizeRemoteControlUrl } from "../dist/config.js";
 import { buildSearchQuery, extractSearchFilters, scopeSearchQuery } from "../dist/github.js";
 import { normalizeRepoPath } from "../dist/paths.js";
 import { rankSymbolHit } from "../dist/source.js";
@@ -8,8 +8,8 @@ import { rankSymbolHit } from "../dist/source.js";
 test("search query is scoped to the given owner/repo", () => {
   assert.equal(scopeSearchQuery("FName", "EpicGames", "UnrealEngine"), "FName repo:EpicGames/UnrealEngine");
   assert.equal(
-    scopeSearchQuery("FName repo:someone/else", "ABX-apps", "UnrealEngine"),
-    "FName repo:ABX-apps/UnrealEngine",
+    scopeSearchQuery("FName repo:someone/else", "YourOrg", "UnrealEngine"),
+    "FName repo:YourOrg/UnrealEngine",
   );
 });
 
@@ -48,4 +48,10 @@ test("symbol heuristic prefers UCLASS header declarations", () => {
 test("unexpanded plugin placeholders are treated as unset", () => {
   assert.equal(firstNonEmpty("${GITHUB_TOKEN}", "  ", null), null);
   assert.equal(firstNonEmpty("${GITHUB_TOKEN}", "secret"), "secret");
+});
+
+test("Remote Control URL must be http(s)", () => {
+  assert.equal(normalizeRemoteControlUrl("http://127.0.0.1:30010/"), "http://127.0.0.1:30010");
+  assert.throws(() => normalizeRemoteControlUrl("ftp://127.0.0.1:30010"), { code: "usage" });
+  assert.throws(() => normalizeRemoteControlUrl("not-a-url"), { code: "usage" });
 });

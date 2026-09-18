@@ -134,6 +134,24 @@ export const CONSOLE_CALL = {
   functionName: "ExecuteConsoleCommand",
 } as const;
 
+/** Epic Web Remote Control HTTP routes this package is allowed to call. */
+export const RC_ALLOWED_ROUTES = [
+  { method: "GET", path: "/remote/info" },
+  { method: "PUT", path: "/remote/object/call" },
+  { method: "PUT", path: "/remote/object/property" },
+  { method: "PUT", path: "/remote/object/describe" },
+  { method: "PUT", path: "/remote/batch" },
+] as const;
+
+/**
+ * Real Epic routes this package documents but does not call for viewport/actors:
+ * thumbnail = Content Browser asset thumbs; search/assets = Asset Registry.
+ */
+export const RC_DOCUMENTED_UNCALLED_ROUTES = [
+  { method: "PUT", path: "/remote/object/thumbnail" },
+  { method: "PUT", path: "/remote/search/assets" },
+] as const;
+
 export type RcHttpRoute = {
   path: string;
   verb: string;

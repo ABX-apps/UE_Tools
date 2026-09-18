@@ -1,6 +1,6 @@
 {
   "name": "ue-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Unofficial Unreal Editor Remote Control for Cursor agents, plus optional GitHub source search for users who already have Unreal Engine access. Not affiliated with Epic Games.",
   "author": {
     "name": "ABX-apps"

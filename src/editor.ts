@@ -217,7 +217,7 @@ export async function editorScreenshot(
     url: status.url,
     source: status.source,
     reason:
-      "Remote Control HTTP has no viewport-capture route. PUT /remote/object/thumbnail returns Content Browser asset thumbnails only.",
+      "Remote Control HTTP has no viewport-capture route. PUT /remote/object/thumbnail returns Content Browser asset thumbnails only. ue-tools does not invent a viewport HTTP route.",
     thumbnailRoute: "/remote/object/thumbnail",
     workaround:
       "Run `ue-tools editor highresshot` (wraps `editor console HighResShot`) on a reachable Editor; the PNG is written on that host under Saved/Screenshots and is not returned over HTTP.",
