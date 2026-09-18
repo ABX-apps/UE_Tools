@@ -107,7 +107,7 @@ const TOOLS = [
   {
     name: "ue_editor_status",
     description:
-      "Ping Unreal Editor Remote Control HTTP (GET /remote/info). Requires a running Editor on the user's machine with Remote Control enabled. Set UE_REMOTE_CONTROL_URL (default http://127.0.0.1:30010). Unofficial; not affiliated with Epic Games.",
+      "Ping Unreal Editor Web Remote Control HTTP (GET /remote/info). Enable the Remote Control API plugin, run WebControl.StartServer (default http://127.0.0.1:30010), optionally WebControl.EnableServerOnStartup. Set UE_REMOTE_CONTROL_URL for a remote lab host. Other Unreal services (for example Zen) are not Remote Control. Unofficial; not affiliated with Epic Games.",
     inputSchema: {
       type: "object",
       properties: {
@@ -244,7 +244,7 @@ function errorResult(err: unknown) {
 }
 
 export async function runMcpServer(): Promise<void> {
-  const server = new Server({ name: "ue-tools", version: "0.2.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "ue-tools", version: "0.3.0" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...TOOLS] }));
 

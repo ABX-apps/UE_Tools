@@ -19,7 +19,7 @@ test("mcp stdio lists tools and fixture search", async () => {
     env,
     stderr: "pipe",
   });
-  const client = new Client({ name: "ue-tools-test", version: "0.2.0" });
+  const client = new Client({ name: "ue-tools-test", version: "0.3.0" });
   await client.connect(transport);
   try {
     const listed = await client.listTools();
@@ -89,6 +89,19 @@ test("mcp stdio lists tools and fixture search", async () => {
     assert.equal(select.isError, undefined);
     const selected = JSON.parse(select.content[0].text);
     assert.ok(selected.actors.some((actor) => actor.name === "PlayerStart_0"));
+
+    const shot = await client.callTool({ name: "ue_editor_screenshot", arguments: {} });
+    assert.equal(shot.isError, undefined);
+    const shotBody = JSON.parse(shot.content[0].text);
+    assert.equal(shotBody.available, false);
+    assert.equal(shotBody.thumbnailRoute, "/remote/object/thumbnail");
+    assert.match(shotBody.reason, /no viewport-capture/);
+
+    const highres = await client.callTool({ name: "ue_editor_highresshot", arguments: {} });
+    assert.equal(highres.isError, undefined);
+    const highresBody = JSON.parse(highres.content[0].text);
+    assert.equal(highresBody.command, "HighResShot");
+    assert.equal(highresBody.imageReturned, false);
   } finally {
     await client.close();
   }

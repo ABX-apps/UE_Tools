@@ -41,16 +41,17 @@ Live GitHub calls fail closed unless `GITHUB_TOKEN` or `GH_TOKEN` is set. The to
 
 ## Editor Remote Control
 
-Live Editor calls use `fetch` against the Web Remote Control HTTP server (default **`http://127.0.0.1:30010`**).
+Live Editor calls use `fetch` against Epic’s Web Remote Control HTTP server. Only those documented HTTP routes are used. If the URL is down or is not Remote Control, commands fail closed with `editor_unreachable`.
 
-The Editor must run on **your machine** (or a lab workstation). Agent hosts such as Grok Bot Linux do not host Unreal Editor. Set `UE_REMOTE_CONTROL_URL` to the machine where:
+### Setup (any Unreal user)
 
-1. Unreal Editor is running.
-2. The **Remote Control API** plugin is enabled.
-3. The HTTP server is listening (`WebControl.StartServer`, or enable on startup).
-4. For `editor console` / `editor highresshot`: allow remote console execution in Remote Control settings (`bAllowConsoleCommandRemoteExecution`).
+1. Enable the **Remote Control API** plugin in your project.
+2. In the Editor console, run `WebControl.StartServer`. The HTTP server listens at **`http://127.0.0.1:30010`** by default.
+3. Optional: `WebControl.EnableServerOnStartup` so the server starts with the Editor.
+4. Optional, for `editor console` / `editor highresshot`: allow remote console execution in Remote Control settings (`bAllowConsoleCommandRemoteExecution`).
+5. If the Editor runs on another lab host, set `UE_REMOTE_CONTROL_URL` to that host’s Remote Control HTTP base URL. Bind the HTTP server so the client can reach it, and allow the port through the host firewall. Do not expose Remote Control to the public internet.
 
-If the URL is down, commands fail closed with `editor_unreachable`.
+Other Unreal services (for example **Zen**) listen on other ports and are **not** Remote Control. Point `UE_REMOTE_CONTROL_URL` only at the Web Remote Control HTTP server.
 
 | Variable | Public default |
 | --- | --- |
@@ -58,7 +59,7 @@ If the URL is down, commands fail closed with `editor_unreachable`.
 | `UE_REMOTE_CONTROL_URL` | `http://127.0.0.1:30010` |
 | `UE_FIXTURE` | unset (`1` = dry mode: source fixture tree + mock Remote Control HTTP) |
 
-Private fork example: `UE_OWNER=ABX-apps` `UE_REPO=UnrealEngine` `UE_REF=release`.
+Override `UE_OWNER` / `UE_REPO` / `UE_REF` when searching a private GitHub fork instead of `EpicGames/UnrealEngine`.
 
 `status` never prints the GitHub token.
 

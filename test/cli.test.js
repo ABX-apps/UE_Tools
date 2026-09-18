@@ -48,7 +48,9 @@ test("cli --help", () => {
   assert.match(result.stdout, /editor object describe/);
   assert.match(result.stdout, /editor select/);
   assert.match(result.stdout, /editor console/);
-  assert.match(result.stdout, /highresshot/);
+  assert.match(result.stdout, /WebControl\.StartServer/);
+  assert.match(result.stdout, /editor_unreachable/);
+  assert.match(result.stdout, /confirm/);
 });
 
 test("fixture status has no secrets", () => {
@@ -66,11 +68,11 @@ test("fixture status has no secrets", () => {
 
 test("UE_OWNER overrides default for private forks", () => {
   const env = fixtureEnv();
-  env.UE_OWNER = "ABX-apps";
+  env.UE_OWNER = "YourOrg";
   const result = run(["--fixture", "status"], env);
   assert.equal(result.status, 0, result.stderr);
   const body = JSON.parse(result.stdout);
-  assert.equal(body.owner, "ABX-apps");
+  assert.equal(body.owner, "YourOrg");
   assert.equal(body.repo, "UnrealEngine");
 });
 
@@ -165,7 +167,7 @@ test("live search fails closed without token", () => {
 test("plugin manifests parse", () => {
   const plugin = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
   assert.equal(plugin.name, "ue-tools");
-  assert.equal(plugin.version, "0.2.0");
+  assert.equal(plugin.version, "0.3.0");
   assert.match(plugin.$schema, /plugin\.schema\.json$/);
   assert.match(plugin.description, /Not affiliated with Epic Games/i);
   assert.equal(plugin.license, "MIT");
@@ -175,6 +177,7 @@ test("plugin manifests parse", () => {
   assert.equal(mcp.mcpServers["ue-tools"].command, "node");
   assert.equal(mcp.mcpServers["ue-tools"].env.GITHUB_TOKEN, "${GITHUB_TOKEN}");
   const cursorPlugin = JSON.parse(fs.readFileSync(path.join(root, ".cursor-plugin", "plugin.json"), "utf8"));
+  assert.equal(cursorPlugin.version, "0.3.0");
   const vars = cursorPlugin.variables.properties;
   assert.ok(vars.GITHUB_TOKEN);
   assert.ok(vars.GH_TOKEN);

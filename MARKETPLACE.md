@@ -17,6 +17,8 @@ The portable Agent Plugins 1.0 schema (`plugin.json`) does **not** allow a `vari
 
 `mcp.json` maps those names into the MCP process env. Unexpanded `${VAR}` placeholders are ignored. Never put token values in the repo.
 
+Editor setup for any Unreal user: enable the Remote Control API plugin, run `WebControl.StartServer` (optional `WebControl.EnableServerOnStartup`), optionally allow remote console execution, and set `UE_REMOTE_CONTROL_URL` if the Editor is on another host (bind + firewall). Other Unreal services (for example Zen) on other ports are not Remote Control.
+
 ## Paste blurb
 
-Unofficial Cursor plugin for Unreal Engine workflows: drive a locally running Unreal Editor over Epic’s Remote Control HTTP API (status, level actors, selection, object describe/get/set, console commands) and optionally search/read engine source on GitHub if you already have access (default `EpicGames/UnrealEngine` @ `release`; override with `UE_OWNER`/`UE_REPO`/`UE_REF` for a private fork). Not affiliated with Epic Games. Requires Unreal Editor on the user’s machine with the Remote Control plugin enabled (`UE_REMOTE_CONTROL_URL`, default `http://127.0.0.1:30010`). Configure `GITHUB_TOKEN`/`GH_TOKEN` and the Editor URL in Plugins → Configure. Does not ship Unreal Engine source.
+Unofficial Cursor plugin for Unreal Engine workflows: drive a locally running Unreal Editor over Epic’s Remote Control HTTP API (status, level actors, selection, object describe/get/set, console commands) and optionally search/read engine source on GitHub if you already have access (default `EpicGames/UnrealEngine` @ `release`; override with `UE_OWNER`/`UE_REPO`/`UE_REF` for a private fork). Not affiliated with Epic Games. Requires Unreal Editor with the Remote Control plugin enabled (`UE_REMOTE_CONTROL_URL`, default `http://127.0.0.1:30010`). Configure `GITHUB_TOKEN`/`GH_TOKEN` and the Editor URL in Plugins → Configure. Does not ship Unreal Engine source.

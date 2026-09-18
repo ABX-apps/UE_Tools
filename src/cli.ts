@@ -29,7 +29,7 @@ Source (GitHub, default EpicGames/UnrealEngine ref: release):
   ue-tools [--fixture] [--ref <ref>] tree [path]
   ue-tools [--fixture] [--ref <ref>] modules list
 
-Editor (Remote Control HTTP on the user's machine, default http://127.0.0.1:30010):
+Editor (Web Remote Control HTTP; enable Remote Control API, then WebControl.StartServer):
   ue-tools [--fixture] [--url <url>] editor status
   ue-tools [--fixture] [--url <url>] editor actors list [--name <substr>] [--class <substr>] [--limit <n>]
   ue-tools [--fixture] [--url <url>] editor select
@@ -44,9 +44,16 @@ Editor (Remote Control HTTP on the user's machine, default http://127.0.0.1:3001
 
 Env / Marketplace Configure:
   GITHUB_TOKEN or GH_TOKEN     required for live GitHub source search
-  UE_OWNER / UE_REPO / UE_REF  default EpicGames / UnrealEngine / release (override for private forks)
-  UE_REMOTE_CONTROL_URL        Editor Remote Control base URL (user's workstation or lab)
+  UE_OWNER / UE_REPO / UE_REF  default EpicGames / UnrealEngine / release (override for a private fork)
+  UE_REMOTE_CONTROL_URL        Web Remote Control HTTP base URL (default http://127.0.0.1:30010)
   UE_FIXTURE=1                 dry mode (bundled source tree + mock Remote Control HTTP)
+
+Setup: enable Remote Control API → WebControl.StartServer (optional WebControl.EnableServerOnStartup).
+Optional: allow remote console execution for editor console / highresshot.
+If the Editor is on another host, set UE_REMOTE_CONTROL_URL (bind + firewall). Other Unreal
+services (for example Zen) on other ports are not Remote Control. Down/wrong URL → editor_unreachable.
+Mutating object set requires --confirm / confirm=true. editor screenshot documents a gap:
+/remote/object/thumbnail is asset thumbs only; highresshot wraps console HighResShot.
 `;
 
 async function main(argv: string[]): Promise<number> {

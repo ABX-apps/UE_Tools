@@ -85,11 +85,31 @@ export function loadEditorConfig(flags: ArgFlags = {}): EditorConfig {
   const timeoutMs = timeoutRaw ? Number(timeoutRaw) : DEFAULT_REMOTE_CONTROL_TIMEOUT_MS;
   return {
     fixture: isFixture(flags),
-    remoteControlUrl: stripTrailingSlash(
+    remoteControlUrl: normalizeRemoteControlUrl(
       flags.url || firstNonEmpty(process.env.UE_REMOTE_CONTROL_URL) || DEFAULT_REMOTE_CONTROL_URL,
     ),
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : DEFAULT_REMOTE_CONTROL_TIMEOUT_MS,
   };
+}
+
+export function normalizeRemoteControlUrl(url: string): string {
+  const trimmed = stripTrailingSlash(url.trim());
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new UeToolsError(
+      "usage",
+      `Invalid Remote Control URL ${url}. Use an http(s) Web Remote Control base URL (default ${DEFAULT_REMOTE_CONTROL_URL}).`,
+    );
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new UeToolsError(
+      "usage",
+      `Remote Control URL must be http(s) (default ${DEFAULT_REMOTE_CONTROL_URL}). Other Unreal services (for example Zen) on other ports are not Remote Control.`,
+    );
+  }
+  return trimmed;
 }
 
 export function requireConfirm(confirm: boolean | undefined, action: string): void {

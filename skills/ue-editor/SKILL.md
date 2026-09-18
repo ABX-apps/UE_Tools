@@ -1,16 +1,22 @@
 ---
 name: ue-editor
-description: Automate a running Unreal Editor via Remote Control HTTP (default http://127.0.0.1:30010) on the user's machine. Unofficial; not affiliated with Epic Games. Requires the Remote Control plugin.
-when-to-use: Unreal Editor Remote Control, list actors, selection, object properties, console command, HighResShot, viewport screenshot, WebControl port 30010
+description: Automate a running Unreal Editor via Remote Control HTTP (default http://127.0.0.1:30010). Unofficial; not affiliated with Epic Games. Requires the Remote Control API plugin.
+when-to-use: Unreal Editor Remote Control, list actors, selection, object properties, console command, HighResShot, viewport screenshot, WebControl.StartServer, port 30010
 ---
 
 # Unreal Editor automation (Remote Control HTTP)
 
 **Unofficial. Not affiliated with Epic Games.**
 
-Requires a **running Unreal Editor on the user’s machine** (or a lab workstation) with the **Remote Control API** plugin and HTTP server (`WebControl.StartServer`, default `http://127.0.0.1:30010`).
+## Setup (any Unreal user)
 
-The agent host often does **not** run the Editor. Set `UE_REMOTE_CONTROL_URL` to the machine that does. Fail closed on `editor_unreachable` — do not invent other ports or clone the engine.
+1. Enable the **Remote Control API** plugin.
+2. Run `WebControl.StartServer` (default `http://127.0.0.1:30010`).
+3. Optional: `WebControl.EnableServerOnStartup`.
+4. Optional, for `editor console` / `editor highresshot`: allow remote console execution (`bAllowConsoleCommandRemoteExecution`).
+5. If the Editor is on another lab host, set `UE_REMOTE_CONTROL_URL` to that HTTP base URL (bind the server; allow the port through the firewall). Do not expose Remote Control to the public internet.
+
+Other Unreal services (for example **Zen**) listen on other ports and are **not** Remote Control. Fail closed on `editor_unreachable` — do not invent HTTP routes or clone the engine.
 
 Python remote execution (multicast UDP) is a different protocol; these tools use HTTP only.
 

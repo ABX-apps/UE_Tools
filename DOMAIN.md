@@ -10,7 +10,7 @@ Default coordinates for public installers: `https://github.com/EpicGames/UnrealE
 
 | Field | Public default | Override |
 | --- | --- | --- |
-| `owner` | `EpicGames` | `UE_OWNER` (e.g. `ABX-apps` for a private fork) |
+| `owner` | `EpicGames` | `UE_OWNER` (your private-fork owner) |
 | `repo` | `UnrealEngine` | `UE_REPO` |
 | `ref` | `release` | `UE_REF` or `--ref` |
 | `source` | `github` | `--fixture` / `UE_FIXTURE=1` |
@@ -31,16 +31,24 @@ Auth: `GITHUB_TOKEN` or `GH_TOKEN` with access to the configured repo. Fail clos
 
 ## 2. Editor automation (Remote Control HTTP)
 
-Talks to a **running Unreal Editor on the user’s machine** (or a lab workstation) via Epic’s **Web Remote Control HTTP API** (`fetch`, no SDK). Python remote execution (multicast UDP) is a different protocol and is not used.
+Talks to a **running Unreal Editor** via Epic’s **Web Remote Control HTTP API** (`fetch`, no SDK). Python remote execution (multicast UDP) is a different protocol and is not used.
 
-The agent host (including Grok Bot Linux) typically does **not** run the Editor. Point `UE_REMOTE_CONTROL_URL` at the machine that does.
+### Setup (any Unreal user)
+
+1. Enable the **Remote Control API** plugin.
+2. Run `WebControl.StartServer` (default **`http://127.0.0.1:30010`**).
+3. Optional: `WebControl.EnableServerOnStartup`.
+4. Optional, for console / HighResShot: allow remote console execution (`bAllowConsoleCommandRemoteExecution`).
+5. If the Editor is on another lab host, set `UE_REMOTE_CONTROL_URL` to that HTTP base URL. Bind the server and allow the port through the firewall; do not expose it to the public internet.
+
+Other Unreal services (for example **Zen**) listen on other ports and are **not** Remote Control.
+
+This package only calls documented Web Remote Control routes. Live calls fail closed (`editor_unreachable`) if that URL does not answer or is not Remote Control.
 
 | Field | Default | Override |
 | --- | --- | --- |
 | `remoteControlUrl` | `http://127.0.0.1:30010` | `UE_REMOTE_CONTROL_URL` or `--url` |
 | `source` | `remote-control` | `--fixture` / `UE_FIXTURE=1` (in-memory mock HTTP) |
-
-Requirements on that machine: Unreal Editor running, **Remote Control API** plugin enabled, HTTP server started (`WebControl.StartServer` / enable on startup). Live calls fail closed (`editor_unreachable`) if that URL does not answer.
 
 Verified routes (Epic [Remote Control API HTTP Reference](https://dev.epicgames.com/documentation/unreal-engine/remote-control-api-http-reference-for-unreal-engine) / `WebRemoteControl`):
 
@@ -51,8 +59,8 @@ Verified routes (Epic [Remote Control API HTTP Reference](https://dev.epicgames.
 | `PUT /remote/object/describe` | `editor object describe` — metadata (Name, Class, Properties) |
 | `PUT /remote/object/property` | `editor object get` (`READ_ACCESS`) / `editor object set` (`WRITE_TRANSACTION_ACCESS` or `WRITE_ACCESS`) |
 | `PUT /remote/batch` | used when `editor actors list --class` needs Class from describe |
-| `PUT /remote/search/assets` | Asset Registry — **not** level actors |
-| `PUT /remote/object/thumbnail` | Content Browser **asset** thumbnails — **not** viewport |
+| `PUT /remote/search/assets` | Asset Registry — **not** level actors; not called for actor list |
+| `PUT /remote/object/thumbnail` | Content Browser **asset** thumbnails — **not** viewport; not called for screenshot |
 
 There is **no** `/remote/search/actors` and **no** viewport-capture HTTP route. Selection is `EditorActorSubsystem.GetSelectedLevelActors` over `/remote/object/call`, not a dedicated route.
 

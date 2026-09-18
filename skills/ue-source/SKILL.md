@@ -8,7 +8,7 @@ when-to-use: Unreal Engine source, UE module, Engine/Source, UObject, UCLASS, fi
 
 **Unofficial. Not affiliated with Epic Games.** Do not clone or redistribute the engine.
 
-Default repo is **`EpicGames/UnrealEngine`**, ref **`release`**. Set `UE_OWNER` / `UE_REPO` / `UE_REF` for a private fork (for example `ABX-apps` / `UnrealEngine` / `release`). The caller must already have GitHub access to that repo.
+Default repo is **`EpicGames/UnrealEngine`**, ref **`release`**. Set `UE_OWNER` / `UE_REPO` / `UE_REF` for a private fork. The caller must already have GitHub access to that repo.
 
 For a **running Editor** (actors, properties, console commands), use the `ue-editor` skill and `ue_editor_*` tools.
 
