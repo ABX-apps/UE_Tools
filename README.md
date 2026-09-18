@@ -11,7 +11,15 @@ Data shape: [`DOMAIN.md`](./DOMAIN.md). Marketplace notes: [`MARKETPLACE.md`](./
 
 ## Install from Cursor Marketplace
 
-Once listed: in Cursor, open the Marketplace, search for **ue-tools**, and install. Then set env as needed (`UE_REMOTE_CONTROL_URL`, and `GITHUB_TOKEN` only if you use source search).
+Once listed: in Cursor, open the Marketplace, search for **ue-tools**, and install. Then open **Plugins → Configure** and set:
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `GITHUB_TOKEN` or `GH_TOKEN` | For source search | PAT that can read the configured GitHub repo |
+| `UE_REMOTE_CONTROL_URL` | For a non-default Editor | Remote Control HTTP base URL (default `http://127.0.0.1:30010`) |
+| `UE_OWNER` / `UE_REPO` / `UE_REF` | Optional | Private-fork override (default `EpicGames` / `UnrealEngine` / `release`) |
+
+The Agent Plugins 1.0 `plugin.json` schema does **not** allow a `variables` field (`additionalProperties: false`). Cursor Marketplace Configure is declared in [`.cursor-plugin/plugin.json`](./.cursor-plugin/plugin.json) and wired through `mcp.json` env placeholders. Unexpanded `${VAR}` strings are treated as unset. Local installs can keep using process env / [`.env.example`](./.env.example) instead.
 
 Until it is listed, install from this repo (local plugin directory after `npm install && npm run build`).
 
@@ -40,7 +48,7 @@ The Editor must run on **your machine** (or a lab workstation). Agent hosts such
 1. Unreal Editor is running.
 2. The **Remote Control API** plugin is enabled.
 3. The HTTP server is listening (`WebControl.StartServer`, or enable on startup).
-4. For `editor console`: allow remote console execution in Remote Control settings (`bAllowConsoleCommandRemoteExecution`).
+4. For `editor console` / `editor highresshot`: allow remote console execution in Remote Control settings (`bAllowConsoleCommandRemoteExecution`).
 
 If the URL is down, commands fail closed with `editor_unreachable`.
 
@@ -60,20 +68,31 @@ Private fork example: `UE_OWNER=ABX-apps` `UE_REPO=UnrealEngine` `UE_REF=release
 # Source (GitHub; default EpicGames/UnrealEngine @ release)
 ue-tools status
 ue-tools search FName
+ue-tools search --path Engine/Source/Runtime --extension h FName
+ue-tools symbol FName
+ue-tools find-class UEngine
+ue-tools history Engine/Source/Runtime/Core/Public/CoreMinimal.h
 ue-tools file get Engine/Source/Runtime/Core/Public/CoreMinimal.h
 ue-tools tree Engine/Source/Runtime
 ue-tools modules list
 
 # Editor (Remote Control HTTP on the user's machine)
 ue-tools editor status
-ue-tools editor actors list
+ue-tools editor actors list --name Player --class PlayerStart --limit 20
+ue-tools editor select
+ue-tools editor object describe /Game/Maps/Map.Map:PersistentLevel.Floor
+ue-tools editor object get /Game/Maps/Map.Map:PersistentLevel.Floor RelativeLocation
+ue-tools editor object set /Game/Maps/Map.Map:PersistentLevel.Floor bHidden true --confirm
 ue-tools editor console "stat fps"
+ue-tools editor highresshot
 ue-tools editor screenshot
 ```
 
-`--url` overrides `UE_REMOTE_CONTROL_URL`. `--ref` overrides `UE_REF` for file/tree/modules.
+`--url` overrides `UE_REMOTE_CONTROL_URL`. `--ref` overrides `UE_REF` for file/tree/modules/history.
 
-`editor screenshot` documents a **gap**: Remote Control has no viewport-capture HTTP route (`/remote/object/thumbnail` is asset thumbs only). Use `editor console HighResShot` to write a PNG on the Editor host.
+`editor screenshot` documents a **gap**: Remote Control has no viewport-capture HTTP route (`/remote/object/thumbnail` is asset thumbs only). `editor highresshot` wraps `editor console HighResShot` and writes a PNG on the Editor host.
+
+`editor object set` is mutating and requires `--confirm` (MCP: `confirm: true`). Default write access is `WRITE_TRANSACTION_ACCESS` (undoable). Pass `--no-transaction` for `WRITE_ACCESS`.
 
 ## Prove (no GitHub, no Editor)
 
@@ -81,21 +100,25 @@ ue-tools editor screenshot
 npm test
 npx ue-tools --help
 npx ue-tools --fixture search Core
+npx ue-tools --fixture search --path Engine/Source/Runtime --extension h Core
+npx ue-tools --fixture symbol FName
+npx ue-tools --fixture history Engine/Source/Runtime/Core/Public/CoreMinimal.h
 npx ue-tools --fixture modules list
 npx ue-tools --fixture editor status
-npx ue-tools --fixture editor actors list
+npx ue-tools --fixture editor actors list --name Floor
+npx ue-tools --fixture editor select
+npx ue-tools --fixture editor object describe /Game/Maps/FixtureMap.FixtureMap:PersistentLevel.Floor
 ```
 
 ## Agent plugin layout
 
-- `plugin.json`
-- `mcp.json` — stdio MCP (`node ${PLUGIN_ROOT}/dist/mcp.js`)
+- `plugin.json` — Agent Plugins 1.0 portable manifest (no `variables`; schema forbids extra fields)
+- `.cursor-plugin/plugin.json` — Cursor Marketplace Configure variables
+- `mcp.json` — stdio MCP (`node ${PLUGIN_ROOT}/dist/mcp.js`) plus env placeholders
 - `skills/ue-source/SKILL.md`, `skills/ue-editor/SKILL.md`
 
-Inherit `GITHUB_TOKEN` / `GH_TOKEN` for source tools and `UE_REMOTE_CONTROL_URL` for Editor tools.
+Source MCP tools: `ue_status`, `ue_search`, `ue_symbol`, `ue_history`, `ue_file_get`, `ue_tree`, `ue_modules_list`.
 
-Source MCP tools: `ue_status`, `ue_search`, `ue_file_get`, `ue_tree`, `ue_modules_list`.
-
-Editor MCP tools: `ue_editor_status`, `ue_editor_actors_list`, `ue_editor_console`, `ue_editor_screenshot`.
+Editor MCP tools: `ue_editor_status`, `ue_editor_actors_list`, `ue_editor_select`, `ue_editor_object_describe`, `ue_editor_object_get`, `ue_editor_object_set`, `ue_editor_console`, `ue_editor_highresshot`, `ue_editor_screenshot`.
 
 The CLI uses Node stdlib + `fetch`. `@modelcontextprotocol/sdk` is the MCP server runtime.

@@ -1,0 +1,47 @@
+{
+  "name": "ue-tools",
+  "version": "0.2.0",
+  "description": "Unofficial Unreal Editor Remote Control for Cursor agents, plus optional GitHub source search for users who already have Unreal Engine access. Not affiliated with Epic Games.",
+  "author": {
+    "name": "ABX-apps"
+  },
+  "homepage": "https://github.com/ABX-apps/UE_Tools",
+  "repository": "https://github.com/ABX-apps/UE_Tools",
+  "license": "MIT",
+  "keywords": ["unreal", "ue", "editor", "remote-control", "source"],
+  "variables": {
+    "type": "object",
+    "properties": {
+      "GITHUB_TOKEN": {
+        "type": "string",
+        "title": "GitHub token",
+        "description": "PAT that can read the configured Unreal Engine GitHub repo (default EpicGames/UnrealEngine). Optional if you only use Editor Remote Control. Alias of GH_TOKEN."
+      },
+      "GH_TOKEN": {
+        "type": "string",
+        "title": "GitHub token (alias)",
+        "description": "Accepted alias for GITHUB_TOKEN. Set one of the two for source search."
+      },
+      "UE_REMOTE_CONTROL_URL": {
+        "type": "string",
+        "title": "Unreal Remote Control URL",
+        "description": "Base URL of a running Unreal Editor Web Remote Control HTTP server on your machine or lab. Default http://127.0.0.1:30010."
+      },
+      "UE_OWNER": {
+        "type": "string",
+        "title": "GitHub owner",
+        "description": "Override source repo owner. Default EpicGames. Use a private-fork owner when you are not using EpicGames/UnrealEngine."
+      },
+      "UE_REPO": {
+        "type": "string",
+        "title": "GitHub repo",
+        "description": "Override source repo name. Default UnrealEngine."
+      },
+      "UE_REF": {
+        "type": "string",
+        "title": "Git ref",
+        "description": "Override source git ref (branch, tag, or SHA). Default release."
+      }
+    }
+  }
+}

@@ -5,7 +5,15 @@
       "type": "stdio",
       "command": "node",
       "args": ["${PLUGIN_ROOT}/dist/mcp.js"],
-      "cwd": "${PLUGIN_ROOT}"
+      "cwd": "${PLUGIN_ROOT}",
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "GH_TOKEN": "${GH_TOKEN}",
+        "UE_REMOTE_CONTROL_URL": "${UE_REMOTE_CONTROL_URL}",
+        "UE_OWNER": "${UE_OWNER}",
+        "UE_REPO": "${UE_REPO}",
+        "UE_REF": "${UE_REF}"
+      }
     }
   }
 }

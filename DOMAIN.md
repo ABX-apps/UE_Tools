@@ -20,10 +20,14 @@ Auth: `GITHUB_TOKEN` or `GH_TOKEN` with access to the configured repo. Fail clos
 | Op | Output |
 | --- | --- |
 | `status` | `{ owner, repo, ref, source, tokenConfigured }` |
-| `search` | `{ query, repo, total, incomplete, hits[] }` |
+| `search` | `{ query, repo, total, incomplete, hits[] }` with `path`, `name`, `repo`, `snippet` |
+| `symbol` / `find-class` | Heuristic `.h` search + rank for `UCLASS` / `class FFoo` declarations |
+| `history` / `blame` | Last N commits touching a path via `GET /repos/{owner}/{repo}/commits?path=&sha=` (not line-level blame) |
 | `file get` | `{ path, ref, sha?, size, encoding, content }` |
 | `tree` | `{ path, ref, entries[] }` |
 | `modules list` | heuristic child dirs of `Engine/Source/Runtime` and `Engine/Source/Editor` |
+
+`search` accepts `path` / `language` / `extension` filters (CLI flags or GitHub qualifiers). `repo:` in the user query is stripped and replaced with the configured owner/repo.
 
 ## 2. Editor automation (Remote Control HTTP)
 
@@ -38,24 +42,32 @@ The agent host (including Grok Bot Linux) typically does **not** run the Editor.
 
 Requirements on that machine: Unreal Editor running, **Remote Control API** plugin enabled, HTTP server started (`WebControl.StartServer` / enable on startup). Live calls fail closed (`editor_unreachable`) if that URL does not answer.
 
-Verified routes (`WebRemoteControl.cpp` / `WebRemoteControlEditorRoutes.cpp`, Epic HTTP reference):
+Verified routes (Epic [Remote Control API HTTP Reference](https://dev.epicgames.com/documentation/unreal-engine/remote-control-api-http-reference-for-unreal-engine) / `WebRemoteControl`):
 
 | HTTP | Role in this package |
 | --- | --- |
 | `GET /remote/info` | `editor status` ping + route list |
-| `PUT /remote/object/call` | function calls (actors, console) |
+| `PUT /remote/object/call` | function calls (actors, selection, console) |
+| `PUT /remote/object/describe` | `editor object describe` — metadata (Name, Class, Properties) |
+| `PUT /remote/object/property` | `editor object get` (`READ_ACCESS`) / `editor object set` (`WRITE_TRANSACTION_ACCESS` or `WRITE_ACCESS`) |
+| `PUT /remote/batch` | used when `editor actors list --class` needs Class from describe |
 | `PUT /remote/search/assets` | Asset Registry — **not** level actors |
 | `PUT /remote/object/thumbnail` | Content Browser **asset** thumbnails — **not** viewport |
 
-There is **no** `/remote/search/actors` and **no** viewport-capture HTTP route.
+There is **no** `/remote/search/actors` and **no** viewport-capture HTTP route. Selection is `EditorActorSubsystem.GetSelectedLevelActors` over `/remote/object/call`, not a dedicated route.
 
 | Op | How |
 | --- | --- |
 | `editor status` / `ue_editor_status` | `GET /remote/info` → `{ reachable, url, source, routes[] }` |
-| `editor actors list` / `ue_editor_actors_list` | `PUT /remote/object/call` `{ objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem", functionName: "GetAllLevelActors" }`, fallback `/Script/EditorScriptingUtilities.Default__EditorLevelLibrary`. Returns `{ via, actors: [{ path, name }] }`. |
+| `editor actors list` / `ue_editor_actors_list` | `PUT /remote/object/call` `{ objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem", functionName: "GetAllLevelActors" }`, fallback `/Script/EditorScriptingUtilities.Default__EditorLevelLibrary`. Optional `--name` / `--class` / `--limit`. Class filter describes matching actors. Returns `{ via, actors: [{ path, name, class? }], truncated }` |
+| `editor select` / `ue_editor_select` | `PUT /remote/object/call` `GetSelectedLevelActors` on `EditorActorSubsystem`, then `EditorLevelLibrary` |
+| `editor object describe` / `ue_editor_object_describe` | `PUT /remote/object/describe` `{ objectPath }` |
+| `editor object get` / `ue_editor_object_get` | `PUT /remote/object/property` `{ objectPath, propertyName?, access: "READ_ACCESS" }` |
+| `editor object set` / `ue_editor_object_set` | Mutating. Requires `--confirm` / `confirm: true`. `PUT /remote/object/property` with `WRITE_TRANSACTION_ACCESS` (default) or `WRITE_ACCESS` |
 | `editor console` / `ue_editor_console` | `PUT /remote/object/call` `{ objectPath: "/Script/Engine.Default__KismetSystemLibrary", functionName: "ExecuteConsoleCommand", parameters: { Command } }`. Editor must allow remote console execution (`bAllowConsoleCommandRemoteExecution`). |
-| `editor screenshot` / `ue_editor_screenshot` | **Gap.** Confirms Editor via `/remote/info`, then reports that viewport bytes are not available over Remote Control HTTP. Workaround: `editor console HighResShot` writes PNG on the **Editor host** (`Saved/Screenshots`). |
+| `editor highresshot` / `ue_editor_highresshot` | Wraps `editor console HighResShot`. PNG is on the **Editor host**; bytes are not returned. |
+| `editor screenshot` / `ue_editor_screenshot` | **Gap.** Confirms Editor via `/remote/info`, then reports that viewport bytes are not available over Remote Control HTTP. Workaround: `editor highresshot`. |
 
 ## Out of scope
 
-Cloning or redistributing the engine, Epic endorsement or logos, Python remote execution, cooking/UBT, inventing HTTP routes that the plugin does not register.
+Cloning or redistributing the engine, Epic endorsement or logos, Python remote execution, cooking/UBT, inventing HTTP routes that the plugin does not register, line-level git blame.

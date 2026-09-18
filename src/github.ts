@@ -1,19 +1,32 @@
-import { UeToolsError, type SearchHit, type TextMatch, type TreeEntry } from "./types.js";
+import { normalizeRepoPath } from "./paths.js";
+import {
+  UeToolsError,
+  type FileCommit,
+  type SearchFilters,
+  type SearchHit,
+  type TextMatch,
+  type TreeEntry,
+} from "./types.js";
 
 const API = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 const USER_AGENT = "ue-tools";
 
 export type GitHubClient = {
-  searchCode(query: string): Promise<{ total: number; incomplete: boolean; hits: SearchHit[] }>;
+  searchCode(
+    query: string,
+    filters?: SearchFilters,
+  ): Promise<{ total: number; incomplete: boolean; hits: SearchHit[] }>;
   getFile(path: string, ref: string): Promise<{ sha?: string; size: number; content: string }>;
   listTree(path: string, ref: string): Promise<TreeEntry[]>;
+  listCommits(path: string, ref: string, limit: number): Promise<FileCommit[]>;
 };
 
 export function createGitHubClient(owner: string, repo: string, token: string): GitHubClient {
+  const repoSlug = `${owner}/${repo}`;
   return {
-    async searchCode(query: string) {
-      const q = scopeSearchQuery(query, owner, repo);
+    async searchCode(query, filters = {}) {
+      const q = buildSearchQuery(query, owner, repo, filters);
       const data = await githubJson<GitHubSearchResponse>(
         `/search/code?q=${encodeURIComponent(q)}&per_page=20`,
         token,
@@ -22,11 +35,11 @@ export function createGitHubClient(owner: string, repo: string, token: string): 
       return {
         total: data.total_count ?? data.items.length,
         incomplete: Boolean(data.incomplete_results),
-        hits: (data.items ?? []).map(mapSearchHit),
+        hits: (data.items ?? []).map((item) => mapSearchHit(item, repoSlug)),
       };
     },
 
-    async getFile(path: string, ref: string) {
+    async getFile(path, ref) {
       const data = await githubJson<GitHubContent>(contentsUrl(owner, repo, path, ref), token);
       if (Array.isArray(data) || data.type === "dir") {
         throw new UeToolsError("is_directory", `Not a file: ${path || "/"}. Use tree.`);
@@ -45,7 +58,7 @@ export function createGitHubClient(owner: string, repo: string, token: string): 
       };
     },
 
-    async listTree(path: string, ref: string) {
+    async listTree(path, ref) {
       const data = await githubJson<GitHubContent | GitHubContent[]>(
         contentsUrl(owner, repo, path, ref),
         token,
@@ -55,12 +68,73 @@ export function createGitHubClient(owner: string, repo: string, token: string): 
       }
       return data.map(mapTreeEntry);
     },
+
+    async listCommits(path, ref, limit) {
+      const perPage = Math.min(Math.max(limit, 1), 100);
+      const data = await githubJson<GitHubCommit[]>(
+        `/repos/${owner}/${repo}/commits?path=${encodeURIComponent(path)}&sha=${encodeURIComponent(ref)}&per_page=${perPage}`,
+        token,
+      );
+      return (Array.isArray(data) ? data : []).map(mapCommit);
+    },
   };
 }
 
 export function scopeSearchQuery(query: string, owner: string, repo: string): string {
-  const stripped = query.replace(/\brepo:\S+/g, "").trim();
-  return `${stripped} repo:${owner}/${repo}`.trim();
+  return buildSearchQuery(query, owner, repo, {});
+}
+
+export function buildSearchQuery(
+  query: string,
+  owner: string,
+  repo: string,
+  filters: SearchFilters = {},
+): string {
+  const extracted = extractSearchFilters(query);
+  const pathFilter = first(filters.path, extracted.filters.path);
+  const language = first(filters.language, extracted.filters.language);
+  const extension = first(filters.extension, extracted.filters.extension);
+  const parts = [extracted.needle];
+  if (pathFilter) parts.push(`path:${normalizeRepoPath(pathFilter)}`);
+  if (language) parts.push(`language:${language}`);
+  if (extension) parts.push(`extension:${extension.replace(/^\./, "")}`);
+  parts.push(`repo:${owner}/${repo}`);
+  return parts.filter(Boolean).join(" ").trim();
+}
+
+export function extractSearchFilters(query: string): { needle: string; filters: SearchFilters } {
+  const filters: SearchFilters = {};
+  let needle = query.replace(/\brepo:\S+/gi, " ");
+  needle = needle.replace(/\bpath:(\S+)/gi, (_, value: string) => {
+    filters.path = value;
+    return " ";
+  });
+  needle = needle.replace(/\blanguage:(\S+)/gi, (_, value: string) => {
+    filters.language = value;
+    return " ";
+  });
+  needle = needle.replace(/\bextension:(\S+)/gi, (_, value: string) => {
+    filters.extension = value.replace(/^\./, "");
+    return " ";
+  });
+  return { needle: needle.replace(/\s+/g, " ").trim(), filters };
+}
+
+export function shapeSearchHit(
+  hit: Omit<SearchHit, "repo" | "snippet"> & { repo?: string; snippet?: string },
+  repo: string,
+): SearchHit {
+  const snippet =
+    hit.snippet ?? hit.textMatches.find((match) => match.fragment)?.fragment ?? undefined;
+  return {
+    path: hit.path,
+    name: hit.name,
+    repo,
+    snippet,
+    sha: hit.sha,
+    htmlUrl: hit.htmlUrl,
+    textMatches: hit.textMatches,
+  };
 }
 
 function contentsUrl(owner: string, repo: string, repoPath: string, ref: string): string {
@@ -102,18 +176,21 @@ async function githubJson<T>(apiPath: string, token: string, accept = "applicati
   return body as T;
 }
 
-function mapSearchHit(item: GitHubSearchItem): SearchHit {
+function mapSearchHit(item: GitHubSearchItem, repo: string): SearchHit {
   const matches: TextMatch[] = (item.text_matches ?? []).map((match) => ({
     fragment: match.fragment ?? "",
     property: match.property,
   }));
-  return {
-    path: item.path,
-    name: item.name,
-    sha: item.sha,
-    htmlUrl: item.html_url,
-    textMatches: matches,
-  };
+  return shapeSearchHit(
+    {
+      path: item.path,
+      name: item.name,
+      sha: item.sha,
+      htmlUrl: item.html_url,
+      textMatches: matches,
+    },
+    repo,
+  );
 }
 
 function mapTreeEntry(item: GitHubContent): TreeEntry {
@@ -123,6 +200,24 @@ function mapTreeEntry(item: GitHubContent): TreeEntry {
     type: item.type === "dir" ? "dir" : "file",
     size: item.type === "file" ? item.size : undefined,
   };
+}
+
+function mapCommit(item: GitHubCommit): FileCommit {
+  const message = item.commit?.message ?? "";
+  return {
+    sha: item.sha,
+    message: message.split("\n")[0] ?? message,
+    author: item.commit?.author?.name ?? item.author?.login,
+    date: item.commit?.author?.date ?? item.commit?.committer?.date,
+    htmlUrl: item.html_url,
+  };
+}
+
+function first(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    if (value && value.trim()) return value.trim();
+  }
+  return undefined;
 }
 
 type GitHubSearchResponse = {
@@ -147,4 +242,15 @@ type GitHubContent = {
   type?: string;
   encoding?: string;
   content?: string;
+};
+
+type GitHubCommit = {
+  sha: string;
+  html_url?: string;
+  author?: { login?: string };
+  commit?: {
+    message?: string;
+    author?: { name?: string; date?: string };
+    committer?: { name?: string; date?: string };
+  };
 };
