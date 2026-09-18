@@ -7,6 +7,7 @@ const DEFAULT_REPO = "UnrealEngine";
 const DEFAULT_REF = "release";
 export const DEFAULT_REMOTE_CONTROL_URL = "http://127.0.0.1:30010";
 const DEFAULT_REMOTE_CONTROL_TIMEOUT_MS = 5000;
+const UNEXPANDED_PLACEHOLDER = /^\$\{[A-Z][A-Z0-9_]*\}$/;
 
 export type ToolConfig = {
   owner: string;
@@ -26,6 +27,14 @@ export type ArgFlags = {
   fixture?: boolean;
   ref?: string;
   url?: string;
+  path?: string;
+  language?: string;
+  extension?: string;
+  name?: string;
+  class?: string;
+  limit?: number;
+  confirm?: boolean;
+  transaction?: boolean;
 };
 
 export function packageRoot(): string {
@@ -83,13 +92,26 @@ export function loadEditorConfig(flags: ArgFlags = {}): EditorConfig {
   };
 }
 
+export function requireConfirm(confirm: boolean | undefined, action: string): void {
+  if (!confirm) {
+    throw new UeToolsError(
+      "confirm_required",
+      `${action} is mutating. Pass --confirm (CLI) or confirm=true (MCP) to proceed.`,
+    );
+  }
+}
+
 function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
-function firstNonEmpty(...values: Array<string | undefined>): string | null {
+/** Treat unset, blank, and unexpanded `${VAR}` plugin placeholders as missing. */
+export function firstNonEmpty(...values: Array<string | undefined | null>): string | null {
   for (const value of values) {
-    if (value && value.trim()) return value.trim();
+    if (!value) continue;
+    const trimmed = value.trim();
+    if (!trimmed || UNEXPANDED_PLACEHOLDER.test(trimmed)) continue;
+    return trimmed;
   }
   return null;
 }

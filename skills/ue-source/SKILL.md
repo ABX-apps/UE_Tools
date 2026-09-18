@@ -1,7 +1,7 @@
 ---
 name: ue-source
 description: Search and read Unreal Engine source on GitHub (default EpicGames/UnrealEngine, ref release) for users who already have engine access. Override UE_OWNER/UE_REPO for a private fork. Unofficial; not affiliated with Epic Games.
-when-to-use: Unreal Engine source, UE module, Engine/Source, UObject, UBT module list, read a file from EpicGames/UnrealEngine
+when-to-use: Unreal Engine source, UE module, Engine/Source, UObject, UCLASS, find class, file history, UBT module list, read a file from EpicGames/UnrealEngine
 ---
 
 # Unreal Engine source (GitHub)
@@ -10,7 +10,7 @@ when-to-use: Unreal Engine source, UE module, Engine/Source, UObject, UBT module
 
 Default repo is **`EpicGames/UnrealEngine`**, ref **`release`**. Set `UE_OWNER` / `UE_REPO` / `UE_REF` for a private fork (for example `ABX-apps` / `UnrealEngine` / `release`). The caller must already have GitHub access to that repo.
 
-For a **running Editor** (actors, console commands), use the `ue-editor` skill and `ue_editor_*` tools.
+For a **running Editor** (actors, properties, console commands), use the `ue-editor` skill and `ue_editor_*` tools.
 
 ## Auth
 
@@ -21,14 +21,19 @@ For a **running Editor** (actors, console commands), use the `ue-editor` skill a
 | Tool | Use |
 | --- | --- |
 | `ue_status` | Confirm owner/repo/ref/source. Never expect a token in the result. |
-| `ue_search` | Code search scoped to the configured repo. `repo:` is added. |
+| `ue_search` | Code search scoped to the configured repo. Optional `path`, `language`, `extension`. Hits include `path`, `repo`, `snippet`. |
+| `ue_symbol` | Heuristic find-class: `UCLASS` / `class FFoo` / `.h` declarations from a name. |
+| `ue_history` | Last N commits touching a file path (GitHub commits API). Not line-level blame. |
 | `ue_file_get` | Read one UTF-8 file at `ref`. |
 | `ue_tree` | List a directory. |
 | `ue_modules_list` | Heuristic Runtime/Editor module dirs from `tree`. |
 
 ```
 ue-tools status
-ue-tools search <query>
+ue-tools search [--path <dir>] [--language <lang>] [--extension <ext>] <query>
+ue-tools symbol <name>
+ue-tools find-class <name>
+ue-tools history [--limit <n>] <path>
 ue-tools file get <path>
 ue-tools tree [path]
 ue-tools modules list
