@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ue-tools">
+  <rect width="512" height="512" rx="96" fill="#0B1220"/>
+  <rect x="48" y="48" width="416" height="416" rx="72" fill="#111827"/>
+  <path d="M128 150h96c58 0 96 34 96 90s-38 90-96 90h-40v82h-56V150zm56 56v68h36c26 0 42-14 42-34s-16-34-42-34h-36z" fill="#38BDF8"/>
+  <path d="M340 150h56v262h-56V150z" fill="#F8FAFC"/>
+  <circle cx="400" cy="400" r="28" fill="#22C55E"/>
+</svg>
