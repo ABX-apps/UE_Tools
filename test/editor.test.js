@@ -8,6 +8,7 @@ import {
   editorActorsList,
   editorConsole,
   editorHighResShot,
+  isEmptyConsolePayload,
   editorObjectDescribe,
   editorObjectGet,
   editorObjectSet,
@@ -129,12 +130,35 @@ test("fixture object set round-trips in process", async () => {
   assert.equal(got.properties.bHidden, true);
 });
 
-test("fixture editor console", () => {
-  const result = run(["--fixture", "editor", "console", "stat", "fps"], fixtureEnv());
+test("fixture editor console reports an empty Remote Control payload", () => {
+  const result = run(["--fixture", "editor", "console", "LiveCoding.Compile"], fixtureEnv());
   assert.equal(result.status, 0, result.stderr);
   const body = JSON.parse(result.stdout);
-  assert.equal(body.command, "stat fps");
+  assert.equal(body.command, "LiveCoding.Compile");
+  assert.equal(body.url, "fixture://remote-control");
+  assert.equal(body.via.method, "PUT");
+  assert.equal(body.via.path, "/remote/object/call");
   assert.equal(body.via.objectPath, "/Script/Engine.Default__KismetSystemLibrary");
+  assert.equal(body.via.functionName, "ExecuteConsoleCommand");
+  assert.equal(body.httpStatus, 200);
+  assert.deepEqual(body.raw, {});
+  assert.deepEqual(body.result, {});
+  assert.equal(body.empty, true);
+  assert.match(body.note, /console stdout/);
+  assert.match(body.note, /Output Log/);
+  assert.match(body.note, /Editor host/);
+  assert.match(body.note, /LiveCoding\.Compile/);
+  assert.doesNotMatch(body.note, /\/remote\/log/);
+});
+
+test("empty console payloads are detected without treating a real ReturnValue as empty", () => {
+  assert.equal(isEmptyConsolePayload(null), true);
+  assert.equal(isEmptyConsolePayload({}), true);
+  assert.equal(isEmptyConsolePayload({ ReturnValue: null }), true);
+  assert.equal(isEmptyConsolePayload({ ReturnValue: "" }), true);
+  assert.equal(isEmptyConsolePayload({ ReturnValue: {} }), true);
+  assert.equal(isEmptyConsolePayload({ ReturnValue: "ok" }), false);
+  assert.equal(isEmptyConsolePayload({ ReturnValue: null, echoed: "stat fps" }), false);
 });
 
 test("fixture editor highresshot wraps console", () => {
@@ -144,6 +168,7 @@ test("fixture editor highresshot wraps console", () => {
   assert.equal(body.command, "HighResShot");
   assert.equal(body.imageReturned, false);
   assert.match(body.note, /Saved\/Screenshots/);
+  assert.match(body.note, /Output Log/);
 });
 
 test("fixture editor screenshot is a documented gap", () => {
@@ -192,6 +217,11 @@ test("fetch client talks to mock Remote Control HTTP", async () => {
 
     const consoleBody = await editorConsole("stat fps", cfg);
     assert.equal(consoleBody.command, "stat fps");
+    assert.equal(consoleBody.httpStatus, 200);
+    assert.equal(consoleBody.via.path, "/remote/object/call");
+    assert.equal(consoleBody.empty, true);
+    assert.deepEqual(consoleBody.raw, {});
+    assert.match(consoleBody.note, /Output Log/);
 
     const shot = await editorHighResShot(cfg);
     assert.equal(shot.command, "HighResShot");
@@ -209,6 +239,99 @@ test("fetch client talks to mock Remote Control HTTP", async () => {
     } finally {
       await closeServer(screenshotServer);
     }
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("actor list tries EditorActorSubsystem before EditorLevelLibrary", async () => {
+  const calls = [];
+  const server = http.createServer((req, res) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      const body = raw ? JSON.parse(raw) : {};
+      res.setHeader("Content-Type", "application/json");
+      if (req.method === "PUT" && req.url === "/remote/object/call") {
+        calls.push(`${body.objectPath} ${body.functionName}`);
+        if (String(body.objectPath).includes("EditorActorSubsystem")) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ errorMessage: "subsystem unavailable" }));
+          return;
+        }
+        if (String(body.objectPath).includes("EditorLevelLibrary")) {
+          const value =
+            body.functionName === "GetSelectedLevelActors"
+              ? ["/Game/Map.Map:PersistentLevel.SelectedFallback"]
+              : ["/Game/Map.Map:PersistentLevel.ListFallback"];
+          res.end(JSON.stringify({ ReturnValue: value }));
+          return;
+        }
+      }
+      res.statusCode = 404;
+      res.end(JSON.stringify({ errorMessage: "unhandled mock route" }));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const url = `http://127.0.0.1:${server.address().port}`;
+    const cfg = { fixture: false, remoteControlUrl: url, timeoutMs: 1000 };
+    const listed = await editorActorsList(cfg);
+    assert.equal(listed.via.objectPath, "/Script/EditorScriptingUtilities.Default__EditorLevelLibrary");
+    assert.equal(listed.actors[0].name, "ListFallback");
+    const selected = await editorSelect(cfg);
+    assert.equal(selected.via.objectPath, "/Script/EditorScriptingUtilities.Default__EditorLevelLibrary");
+    assert.equal(selected.actors[0].name, "SelectedFallback");
+    assert.match(selected.note, /EditorActorSubsystem/);
+    assert.match(selected.note, /EditorLevelLibrary/);
+    assert.deepEqual(calls, [
+      "/Script/UnrealEd.Default__EditorActorSubsystem GetAllLevelActors",
+      "/Script/EditorScriptingUtilities.Default__EditorLevelLibrary GetAllLevelActors",
+      "/Script/UnrealEd.Default__EditorActorSubsystem GetSelectedLevelActors",
+      "/Script/EditorScriptingUtilities.Default__EditorLevelLibrary GetSelectedLevelActors",
+    ]);
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("console keeps a non-empty ReturnValue and notes an empty one", async () => {
+  const server = http.createServer((req, res) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => {
+      const raw = Buffer.concat(chunks).toString("utf8");
+      const body = raw ? JSON.parse(raw) : {};
+      res.setHeader("Content-Type", "application/json");
+      const command = body.parameters?.Command;
+      if (command === "empty-return") {
+        res.end(JSON.stringify({ ReturnValue: null }));
+        return;
+      }
+      if (command === "has-return") {
+        res.end(JSON.stringify({ ReturnValue: "printed" }));
+        return;
+      }
+      res.statusCode = 404;
+      res.end(JSON.stringify({ errorMessage: "unhandled mock route" }));
+    });
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const url = `http://127.0.0.1:${server.address().port}`;
+    const cfg = { fixture: false, remoteControlUrl: url, timeoutMs: 1000 };
+    const empty = await editorConsole("empty-return", cfg);
+    assert.equal(empty.httpStatus, 200);
+    assert.equal(empty.url, url);
+    assert.equal(empty.empty, true);
+    assert.deepEqual(empty.raw, { ReturnValue: null });
+    assert.match(empty.note, /LiveCoding\.Compile/);
+    const filled = await editorConsole("has-return", cfg);
+    assert.equal(filled.empty, false);
+    assert.equal(filled.note, undefined);
+    assert.deepEqual(filled.raw, { ReturnValue: "printed" });
+    assert.equal(filled.command, "has-return");
   } finally {
     await closeServer(server);
   }
@@ -314,7 +437,7 @@ function listenMock() {
           return;
         }
         if (body.functionName === "ExecuteConsoleCommand") {
-          res.end(JSON.stringify({ Command: body.parameters?.Command }));
+          res.end(JSON.stringify({}));
           return;
         }
       }

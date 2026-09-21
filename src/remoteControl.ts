@@ -17,7 +17,7 @@ export type RcTransport = {
 };
 
 export const UNREACHABLE_HINT =
-  "Unreal Editor is not reachable over Remote Control HTTP. Enable the Remote Control API plugin, run WebControl.StartServer (default http://127.0.0.1:30010), optionally WebControl.EnableServerOnStartup, and set UE_REMOTE_CONTROL_URL if the Editor is on another host (bind the HTTP server and allow that host through the firewall). Other Unreal services (for example Zen) listen on other ports and are not Remote Control.";
+  "Unreal Editor is not reachable over Remote Control HTTP from this process (editor_unreachable). Remote Control is reached from the host running the MCP/CLI process. http://127.0.0.1:30010 is that process's loopback, not automatically the user's Editor. Enable the Remote Control API plugin and run WebControl.StartServer on the Editor host (optional WebControl.EnableServerOnStartup). If this process and the Editor are on different hosts, set UE_REMOTE_CONTROL_URL to an address this host can route to, bind the Editor HTTP server beyond loopback ([HTTPServer.Listeners] DefaultBindAddress=0.0.0.0 or the machine IP), and allow TCP 30010 from this host. An SSH or VPN tunnel is fine when you point UE_REMOTE_CONTROL_URL at the forwarded address. If no network path exists, run ue-tools on the Editor machine. Other Unreal services (for example Zen) listen on other ports and are not Remote Control.";
 
 const FIXTURE_ACTORS = [
   {
@@ -183,8 +183,9 @@ function handleFixtureCall(bodyUnknown: unknown): RcResponse {
     };
   }
   if (functionName === "ExecuteConsoleCommand") {
-    const parameters = asRecord(body.parameters);
-    return { status: 200, json: { Command: String(parameters.Command ?? "") } };
+    // ExecuteConsoleCommand has no output parameter. Live Remote Control
+    // commonly returns an empty object rather than console stdout.
+    return { status: 200, json: {} };
   }
   return { status: 200, json: {} };
 }

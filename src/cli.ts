@@ -48,10 +48,20 @@ Env / Marketplace Configure:
   UE_REMOTE_CONTROL_URL        Web Remote Control HTTP base URL (default http://127.0.0.1:30010)
   UE_FIXTURE=1                 dry mode (bundled source tree + mock Remote Control HTTP)
 
+Remote Control is reached from the host running this process. Default http://127.0.0.1:30010
+is that process's loopback and works only when the process host and the Editor host are the same.
+If they differ, set UE_REMOTE_CONTROL_URL to an address this host can route to. On the Editor host,
+bind beyond loopback ([HTTPServer.Listeners] DefaultBindAddress=0.0.0.0 or the machine IP) and
+allow TCP 30010 from the agent host. An SSH or VPN tunnel is fine. If no network path exists,
+run ue-tools on the Editor machine. Down/wrong URL → editor_unreachable. Do not treat this
+process's loopback as the user's Editor.
+
 Setup: enable Remote Control API → WebControl.StartServer (optional WebControl.EnableServerOnStartup).
 Optional: allow remote console execution for editor console / highresshot.
-If the Editor is on another host, set UE_REMOTE_CONTROL_URL (bind + firewall). Other Unreal
-services (for example Zen) on other ports are not Remote Control. Down/wrong URL → editor_unreachable.
+editor console prints command, url, via, httpStatus, and raw JSON. An empty payload is common:
+Remote Control does not return console stdout — check the Editor Output Log on the Editor host.
+HTTP success does not prove LiveCoding.Compile succeeded.
+Other Unreal services (for example Zen) on other ports are not Remote Control.
 Mutating object set requires --confirm / confirm=true. editor screenshot documents a gap:
 /remote/object/thumbnail is asset thumbs only; highresshot wraps console HighResShot.
 `;

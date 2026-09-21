@@ -1,6 +1,6 @@
 {
   "name": "ue-tools",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Unofficial Unreal Editor Remote Control for Cursor agents, plus optional GitHub source search for users who already have Unreal Engine access. Not affiliated with Epic Games.",
   "author": {
     "name": "ABX-apps"
@@ -25,7 +25,7 @@
       "UE_REMOTE_CONTROL_URL": {
         "type": "string",
         "title": "Unreal Remote Control URL",
-        "description": "Base URL of a running Unreal Editor Web Remote Control HTTP server on your machine or lab. Default http://127.0.0.1:30010."
+        "description": "Web Remote Control HTTP base URL, reached from the host running this plugin. Default http://127.0.0.1:30010 only when that process and the Unreal Editor share a host."
       },
       "UE_OWNER": {
         "type": "string",

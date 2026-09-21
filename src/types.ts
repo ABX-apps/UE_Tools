@@ -107,6 +107,12 @@ export type HistoryResult = {
 export const RUNTIME_MODULES_PATH = "Engine/Source/Runtime";
 export const EDITOR_MODULES_PATH = "Engine/Source/Editor";
 
+/**
+ * Actor enumeration over PUT /remote/object/call.
+ * EditorActorSubsystem is the non-deprecated API. Epic's Remote Control HTTP
+ * reference still documents EditorLevelLibrary.GetAllLevelActors as the example
+ * and does not document another actor-list route (LevelEditorSubsystem is not one).
+ */
 export const ACTOR_LIST_CANDIDATES = [
   {
     objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem",
@@ -185,8 +191,21 @@ export type EditorConsoleResult = {
   url: string;
   source: "remote-control" | "fixture";
   command: string;
-  via: { objectPath: string; functionName: string };
+  via: {
+    method: "PUT";
+    path: "/remote/object/call";
+    objectPath: string;
+    functionName: string;
+  };
+  /** HTTP status from the Remote Control response, when the call returned one. */
+  httpStatus: number;
+  /** Parsed JSON body from Remote Control, unmodified. */
+  raw: unknown;
+  /** Same object as `raw`. Kept so callers that read `result` still see the body. */
   result: unknown;
+  /** True when the body is `{}`, null, or only an empty `ReturnValue`. */
+  empty: boolean;
+  note?: string;
 };
 
 export type EditorScreenshotResult = {

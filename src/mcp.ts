@@ -107,7 +107,7 @@ const TOOLS = [
   {
     name: "ue_editor_status",
     description:
-      "Ping Unreal Editor Web Remote Control HTTP (GET /remote/info). Enable the Remote Control API plugin, run WebControl.StartServer (default http://127.0.0.1:30010), optionally WebControl.EnableServerOnStartup. Set UE_REMOTE_CONTROL_URL for a remote lab host. Other Unreal services (for example Zen) are not Remote Control. Unofficial; not affiliated with Epic Games.",
+      "Ping Unreal Editor Web Remote Control HTTP (GET /remote/info) from the host running this MCP process. Default http://127.0.0.1:30010 is that process's loopback, not automatically the user's Editor. Set UE_REMOTE_CONTROL_URL when the process host and the Editor host differ (Editor must bind beyond loopback; allow TCP 30010). Enable the Remote Control API plugin and run WebControl.StartServer. Fail closed with editor_unreachable. Other Unreal services (for example Zen) are not Remote Control. Unofficial; not affiliated with Epic Games.",
     inputSchema: {
       type: "object",
       properties: {
@@ -196,7 +196,7 @@ const TOOLS = [
   {
     name: "ue_editor_console",
     description:
-      "Run an Unreal console command via PUT /remote/object/call KismetSystemLibrary.ExecuteConsoleCommand. Requires Remote Control to allow remote console execution.",
+      "Run an Unreal console command via PUT /remote/object/call KismetSystemLibrary.ExecuteConsoleCommand. Requires remote console execution. The result includes command, url, via (PUT /remote/object/call), httpStatus, and raw JSON. An empty payload is common: Remote Control does not return console stdout — check the Editor Output Log on the Editor host. HTTP success does not prove LiveCoding.Compile succeeded. No Output Log HTTP route is called.",
     inputSchema: {
       type: "object",
       properties: {
@@ -244,7 +244,7 @@ function errorResult(err: unknown) {
 }
 
 export async function runMcpServer(): Promise<void> {
-  const server = new Server({ name: "ue-tools", version: "0.3.0" }, { capabilities: { tools: {} } });
+  const server = new Server({ name: "ue-tools", version: "0.3.1" }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...TOOLS] }));
 
