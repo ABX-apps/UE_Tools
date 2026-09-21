@@ -25,15 +25,25 @@ Until it is listed, install from this repo (local plugin directory after `npm in
 
 ## Local install
 
+Open the directory that contains `package.json` (the repository root), then install and build there:
+
 ```bash
 git clone https://github.com/ABX-apps/UE_Tools.git
 cd UE_Tools
 npm install
 npm run build
-npx ue-tools --help
 ```
 
-`ue-src` is an alias for `ue-tools`.
+From that same root, prefer:
+
+```bash
+node dist/cli.js --help
+npx --prefix . ue-tools --help
+```
+
+`package.json` `name` is `ue-tools`. The `bin` entries are `ue-tools` and `ue-src` (an alias), both `./dist/cli.js`.
+
+Do not nest another `UE_Tools/` folder inside the clone (`…/UE_Tools/UE_Tools/`). `npx ue-tools` resolves the package from the current project. An extra nested folder hides `package.json` and the bin, so the command 404s. If that happens, `cd` to the directory that contains `package.json` and use `node dist/cli.js` or `npx --prefix . ue-tools`.
 
 ## Auth (source search)
 
@@ -41,15 +51,24 @@ Live GitHub calls fail closed unless `GITHUB_TOKEN` or `GH_TOKEN` is set. The to
 
 ## Editor Remote Control
 
-Live Editor calls use `fetch` against Epic’s Web Remote Control HTTP server. Only those documented HTTP routes are used. If the URL is down or is not Remote Control, commands fail closed with `editor_unreachable`.
+Live Editor calls use `fetch` against Epic’s Web Remote Control HTTP server. Only those documented HTTP routes are used. If the URL is down or is not Remote Control, commands fail closed with `editor_unreachable`. A failed call to this process’s loopback does not mean the user’s Editor is down.
+
+### Where the request runs
+
+Remote Control is reached from **wherever the MCP or CLI process runs** (the process host). It is not implied that the agent’s localhost is the user’s Editor.
+
+- Default `http://127.0.0.1:30010` works only when the process host and the Editor host are the same machine. That address is the process’s loopback.
+- If the process host and the Editor host differ, set `UE_REMOTE_CONTROL_URL` to an address the process host can route to. On the Editor, bind the HTTP server beyond loopback — `[HTTPServer.Listeners]` `DefaultBindAddress=0.0.0.0` or the machine IP, in project or engine config — and allow TCP 30010 from the process host through the firewall. Do not expose Remote Control to the public internet.
+- An SSH local forward or a VPN is a valid general pattern: point `UE_REMOTE_CONTROL_URL` at the forwarded address. Loopback then means the tunnel you configured, not an Editor discovered by magic.
+- If no network path exists, run the `ue-tools` CLI on the Editor machine itself (a shell on that host). Some agent executors cannot target another machine; the parent agent must run Editor commands on the Editor host.
 
 ### Setup (any Unreal user)
 
 1. Enable the **Remote Control API** plugin in your project.
-2. In the Editor console, run `WebControl.StartServer`. The HTTP server listens at **`http://127.0.0.1:30010`** by default.
+2. In the Editor console, run `WebControl.StartServer`. The HTTP server listens at **`http://127.0.0.1:30010`** on the Editor host by default.
 3. Optional: `WebControl.EnableServerOnStartup` so the server starts with the Editor.
 4. Optional, for `editor console` / `editor highresshot`: allow remote console execution in Remote Control settings (`bAllowConsoleCommandRemoteExecution`).
-5. If the Editor runs on another lab host, set `UE_REMOTE_CONTROL_URL` to that host’s Remote Control HTTP base URL. Bind the HTTP server so the client can reach it, and allow the port through the host firewall. Do not expose Remote Control to the public internet.
+5. If the process that calls Remote Control is not on the Editor host, set `UE_REMOTE_CONTROL_URL` as described above.
 
 Other Unreal services (for example **Zen**) listen on other ports and are **not** Remote Control. Point `UE_REMOTE_CONTROL_URL` only at the Web Remote Control HTTP server.
 
@@ -77,7 +96,7 @@ ue-tools file get Engine/Source/Runtime/Core/Public/CoreMinimal.h
 ue-tools tree Engine/Source/Runtime
 ue-tools modules list
 
-# Editor (Remote Control HTTP on the user's machine)
+# Editor (Remote Control HTTP reached from this process)
 ue-tools editor status
 ue-tools editor actors list --name Player --class PlayerStart --limit 20
 ue-tools editor select
@@ -90,6 +109,10 @@ ue-tools editor screenshot
 ```
 
 `--url` overrides `UE_REMOTE_CONTROL_URL`. `--ref` overrides `UE_REF` for file/tree/modules/history.
+
+`editor console` always includes `command`, `url`, `via` (`PUT /remote/object/call` on `KismetSystemLibrary.ExecuteConsoleCommand`), `httpStatus` when the HTTP response arrived, and `raw` (the JSON body; `result` is the same value). `ExecuteConsoleCommand` has no output parameter, so Remote Control often returns `{}` or an empty `ReturnValue`. That is not console stdout. Check the Editor Output Log on the Editor host. HTTP success is not proof that `LiveCoding.Compile` compiled successfully. Epic’s Remote Control HTTP reference does not document an Output Log route; this package does not scrape one.
+
+`editor actors list` and `editor select` call `GetAllLevelActors` / `GetSelectedLevelActors` on `EditorActorSubsystem` first, then `EditorLevelLibrary` (the object path in Epic’s HTTP reference; the library is deprecated in favor of the subsystem). That reference does not document another actor-list route.
 
 `editor screenshot` documents a **gap**: Remote Control has no viewport-capture HTTP route (`/remote/object/thumbnail` is asset thumbs only). `editor highresshot` wraps `editor console HighResShot` and writes a PNG on the Editor host.
 

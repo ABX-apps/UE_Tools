@@ -45,7 +45,11 @@ export async function editorActorsList(
   options: ActorListOptions = {},
 ): Promise<EditorActorsResult> {
   const transport = createEditorTransport(cfg);
-  const listed = await callFirst(transport, ACTOR_LIST_CANDIDATES, "Could not list actors via EditorActorSubsystem or EditorLevelLibrary.GetAllLevelActors over PUT /remote/object/call.");
+  const listed = await callFirst(
+    transport,
+    ACTOR_LIST_CANDIDATES,
+    "Could not list actors via EditorActorSubsystem.GetAllLevelActors or EditorLevelLibrary.GetAllLevelActors over PUT /remote/object/call. Epic's Remote Control HTTP reference does not document another actor-list route.",
+  );
   let actors = parseActorPaths(listed.json);
   const nameFilter = options.name?.trim();
   const classFilter = options.class?.trim();
@@ -79,13 +83,13 @@ export async function editorSelect(cfg: EditorConfig = loadEditorConfig()): Prom
   const listed = await callFirst(
     transport,
     ACTOR_SELECT_CANDIDATES,
-    "Could not get Editor selection via EditorActorSubsystem.GetSelectedLevelActors (PUT /remote/object/call). There is no /remote/search/actors or dedicated selection HTTP route.",
+    "Could not get Editor selection via EditorActorSubsystem.GetSelectedLevelActors or EditorLevelLibrary.GetSelectedLevelActors (PUT /remote/object/call). There is no /remote/search/actors or dedicated selection HTTP route. Epic's Remote Control HTTP reference does not document another selection route.",
   );
   return {
     url: transport.baseUrl,
     source: cfg.fixture ? "fixture" : "remote-control",
     via: listed.via,
-    note: "Selection is EditorActorSubsystem.GetSelectedLevelActors over PUT /remote/object/call. Remote Control does not register a dedicated selection route.",
+    note: `Selection is ${listed.via.functionName} on ${listed.via.objectPath} over PUT /remote/object/call. Tried EditorActorSubsystem first, then EditorLevelLibrary. Remote Control does not register a dedicated selection route.`,
     actors: parseActorPaths(listed.json),
   };
 }
@@ -171,6 +175,19 @@ export async function editorObjectSet(
   };
 }
 
+export const EMPTY_CONSOLE_NOTE =
+  "Remote Control often does not return console stdout. The payload is empty (empty object or empty ReturnValue). Check the Editor Output Log on the Editor host. HTTP success is not proof the command succeeded, including LiveCoding.Compile. There is no documented Remote Control route for Output Log text; ue-tools does not scrape it.";
+
+export function isEmptyConsolePayload(json: unknown): boolean {
+  if (json == null) return true;
+  if (typeof json !== "object" || Array.isArray(json)) return false;
+  const record = json as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (keys.length === 0) return true;
+  if (keys.length === 1 && keys[0] === "ReturnValue") return isEmptyReturnValue(record.ReturnValue);
+  return false;
+}
+
 export async function editorConsole(
   command: string,
   cfg: EditorConfig = loadEditorConfig(),
@@ -178,7 +195,7 @@ export async function editorConsole(
   const cmd = command.trim();
   if (!cmd) throw new UeToolsError("usage", "Usage: ue-tools editor console <command>");
   const transport = createEditorTransport(cfg);
-  const { json } = await transport.request({
+  const { status, json } = await transport.request({
     method: "PUT",
     path: "/remote/object/call",
     body: {
@@ -187,12 +204,22 @@ export async function editorConsole(
       parameters: { Command: cmd },
     },
   });
+  const empty = isEmptyConsolePayload(json);
   return {
     url: transport.baseUrl,
     source: cfg.fixture ? "fixture" : "remote-control",
     command: cmd,
-    via: { ...CONSOLE_CALL },
+    via: {
+      method: "PUT",
+      path: "/remote/object/call",
+      objectPath: CONSOLE_CALL.objectPath,
+      functionName: CONSOLE_CALL.functionName,
+    },
+    httpStatus: status,
+    raw: json,
     result: json,
+    empty,
+    ...(empty ? { note: EMPTY_CONSOLE_NOTE } : {}),
   };
 }
 
@@ -200,10 +227,12 @@ export async function editorHighResShot(
   cfg: EditorConfig = loadEditorConfig(),
 ): Promise<EditorHighResShotResult> {
   const result = await editorConsole("HighResShot", cfg);
+  const shotNote =
+    "HighResShot writes a PNG on the Editor host (Saved/Screenshots). Remote Control HTTP does not return viewport bytes; see editor screenshot for the documented gap.";
   return {
     ...result,
     imageReturned: false,
-    note: "HighResShot writes a PNG on the Editor host (Saved/Screenshots). Remote Control HTTP does not return viewport bytes; see editor screenshot for the documented gap.",
+    note: result.note ? `${shotNote} ${result.note}` : shotNote,
   };
 }
 
@@ -242,6 +271,13 @@ export function parsePropertyValue(raw: string): unknown {
     if (trimmed !== "" && Number.isFinite(Number(trimmed))) return Number(trimmed);
     return trimmed;
   }
+}
+
+function isEmptyReturnValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (typeof value === "object" && !Array.isArray(value)) return Object.keys(value as object).length === 0;
+  return false;
 }
 
 function requireObjectPath(objectPath: string): string {

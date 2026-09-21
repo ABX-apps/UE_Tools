@@ -39,11 +39,11 @@ Talks to a **running Unreal Editor** via Epic’s **Web Remote Control HTTP API*
 2. Run `WebControl.StartServer` (default **`http://127.0.0.1:30010`**).
 3. Optional: `WebControl.EnableServerOnStartup`.
 4. Optional, for console / HighResShot: allow remote console execution (`bAllowConsoleCommandRemoteExecution`).
-5. If the Editor is on another lab host, set `UE_REMOTE_CONTROL_URL` to that HTTP base URL. Bind the server and allow the port through the firewall; do not expose it to the public internet.
+5. Remote Control is reached from the **process host** (wherever the MCP or CLI process runs). Default `http://127.0.0.1:30010` is that process’s loopback and works only when the process host and the Editor host are the same. If they differ, set `UE_REMOTE_CONTROL_URL` to an address the process host can route to, bind the Editor HTTP server beyond loopback (`[HTTPServer.Listeners]` `DefaultBindAddress=0.0.0.0` or the machine IP), and allow TCP 30010 from the process host. An SSH or VPN tunnel is fine. If no network path exists, run `ue-tools` on the Editor machine. Do not expose Remote Control to the public internet.
 
 Other Unreal services (for example **Zen**) listen on other ports and are **not** Remote Control.
 
-This package only calls documented Web Remote Control routes. Live calls fail closed (`editor_unreachable`) if that URL does not answer or is not Remote Control.
+This package only calls documented Web Remote Control routes. Live calls fail closed (`editor_unreachable`) if that URL does not answer or is not Remote Control. A failed loopback call is not proof that the user’s Editor is down.
 
 | Field | Default | Override |
 | --- | --- | --- |
@@ -67,12 +67,12 @@ There is **no** `/remote/search/actors` and **no** viewport-capture HTTP route. 
 | Op | How |
 | --- | --- |
 | `editor status` / `ue_editor_status` | `GET /remote/info` → `{ reachable, url, source, routes[] }` |
-| `editor actors list` / `ue_editor_actors_list` | `PUT /remote/object/call` `{ objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem", functionName: "GetAllLevelActors" }`, fallback `/Script/EditorScriptingUtilities.Default__EditorLevelLibrary`. Optional `--name` / `--class` / `--limit`. Class filter describes matching actors. Returns `{ via, actors: [{ path, name, class? }], truncated }` |
+| `editor actors list` / `ue_editor_actors_list` | `PUT /remote/object/call` `{ objectPath: "/Script/UnrealEd.Default__EditorActorSubsystem", functionName: "GetAllLevelActors" }`, then `/Script/EditorScriptingUtilities.Default__EditorLevelLibrary` (still the example in Epic’s HTTP reference; no third actor-list route is documented). Optional `--name` / `--class` / `--limit`. Class filter describes matching actors. Returns `{ via, actors: [{ path, name, class? }], truncated }` |
 | `editor select` / `ue_editor_select` | `PUT /remote/object/call` `GetSelectedLevelActors` on `EditorActorSubsystem`, then `EditorLevelLibrary` |
 | `editor object describe` / `ue_editor_object_describe` | `PUT /remote/object/describe` `{ objectPath }` |
 | `editor object get` / `ue_editor_object_get` | `PUT /remote/object/property` `{ objectPath, propertyName?, access: "READ_ACCESS" }` |
 | `editor object set` / `ue_editor_object_set` | Mutating. Requires `--confirm` / `confirm: true`. `PUT /remote/object/property` with `WRITE_TRANSACTION_ACCESS` (default) or `WRITE_ACCESS` |
-| `editor console` / `ue_editor_console` | `PUT /remote/object/call` `{ objectPath: "/Script/Engine.Default__KismetSystemLibrary", functionName: "ExecuteConsoleCommand", parameters: { Command } }`. Editor must allow remote console execution (`bAllowConsoleCommandRemoteExecution`). |
+| `editor console` / `ue_editor_console` | `PUT /remote/object/call` `{ objectPath: "/Script/Engine.Default__KismetSystemLibrary", functionName: "ExecuteConsoleCommand", parameters: { Command } }`. Editor must allow remote console execution (`bAllowConsoleCommandRemoteExecution`). Returns `{ command, url, via, httpStatus, raw, result, empty, note? }`. `raw` and `result` are the JSON body. An empty body (`{}` or empty `ReturnValue`) is common: Remote Control does not return console stdout. Check the Editor Output Log on the Editor host. HTTP success does not prove `LiveCoding.Compile` succeeded. No Output Log route is called. |
 | `editor highresshot` / `ue_editor_highresshot` | Wraps `editor console HighResShot`. PNG is on the **Editor host**; bytes are not returned. |
 | `editor screenshot` / `ue_editor_screenshot` | **Gap.** Confirms Editor via `/remote/info`, then reports that viewport bytes are not available over Remote Control HTTP. Workaround: `editor highresshot`. |
 

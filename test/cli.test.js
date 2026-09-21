@@ -50,6 +50,10 @@ test("cli --help", () => {
   assert.match(result.stdout, /editor console/);
   assert.match(result.stdout, /WebControl\.StartServer/);
   assert.match(result.stdout, /editor_unreachable/);
+  assert.match(result.stdout, /process host/);
+  assert.match(result.stdout, /Editor host/);
+  assert.match(result.stdout, /UE_REMOTE_CONTROL_URL/);
+  assert.match(result.stdout, /LiveCoding\.Compile/);
   assert.match(result.stdout, /confirm/);
 });
 
@@ -167,7 +171,7 @@ test("live search fails closed without token", () => {
 test("plugin manifests parse", () => {
   const plugin = JSON.parse(fs.readFileSync(path.join(root, "plugin.json"), "utf8"));
   assert.equal(plugin.name, "ue-tools");
-  assert.equal(plugin.version, "0.3.0");
+  assert.equal(plugin.version, "0.3.1");
   assert.match(plugin.$schema, /plugin\.schema\.json$/);
   assert.match(plugin.description, /Not affiliated with Epic Games/i);
   assert.equal(plugin.license, "MIT");
@@ -177,7 +181,7 @@ test("plugin manifests parse", () => {
   assert.equal(mcp.mcpServers["ue-tools"].command, "node");
   assert.equal(mcp.mcpServers["ue-tools"].env.GITHUB_TOKEN, "${GITHUB_TOKEN}");
   const cursorPlugin = JSON.parse(fs.readFileSync(path.join(root, ".cursor-plugin", "plugin.json"), "utf8"));
-  assert.equal(cursorPlugin.version, "0.3.0");
+  assert.equal(cursorPlugin.version, "0.3.1");
   const vars = cursorPlugin.variables.properties;
   assert.ok(vars.GITHUB_TOKEN);
   assert.ok(vars.GH_TOKEN);
